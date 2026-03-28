@@ -61,6 +61,8 @@ class sheet_API:
         sheet.update(range_name=target_range, values=[new_row_data],value_input_option='USER_ENTERED')
         print(f"Successfully added row to {table_details['sheet_name']} at {target_range}")
 
+    def add_loan_out_entry(self, Bath_ID, Item, AuthCode):
+        
 
     def get_possible_auth_code(self) -> list:   
         table_details = self.convert_LUT('Auth_Code')

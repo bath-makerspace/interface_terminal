@@ -12,4 +12,8 @@ This is the codebase use for the makerspace's TouchScreen User Interface
 - Sheet_API.py - This file contains the class that handles all
 - Sheet_LUT.csv - This file contains the LUT conversion between table names and the column value
 - Bath Cost_Code.py - This file contains the cost calculation method
+
+# Launch Instruction
+``` bash
 pip install -r requirements.txt
+```
