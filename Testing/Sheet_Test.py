@@ -3,13 +3,13 @@ from oauth2client.service_account import ServiceAccountCredentials
 
 # Authorize the API
 scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
-creds = ServiceAccountCredentials.from_json_keyfile_name("cred.json", scope)
+creds = ServiceAccountCredentials.from_json_keyfile_name("../cred.json", scope)
 client = gspread.authorize(creds)
 
 
 def get_filament_table(spreadsheet_name, table_range):
     scopes = ["https://www.googleapis.com/auth/spreadsheets"]
-    creds = ServiceAccountCredentials.from_json_keyfile_name("cred.json", scope)
+    creds = ServiceAccountCredentials.from_json_keyfile_name("../cred.json", scope)
     client = gspread.authorize(creds)
     
     # Open the 'Filament' tab specifically
