@@ -1,8 +1,17 @@
 table, spreadsheet_name, sheet_name, col
+
 F1_75,Inventory,Filament,A:F
 F2_85,Inventory,Filament,H:M
 Markforged,Inventory,Filament,O:Q
-IT,Inventory,Equipment Inventory,A:D
+
+IT_Inventory,Inventory,Equipment Inventory,A:E
+Mechanical_tools,Inventory,Equipment Inventory,G:L
+Electronics_Equipment,Inventory,Equipment Inventory,N:T
+Laser_Printer_Equip, Inventory,Equipment Inventory,V:AA
+
 Auth_Code,Committee Info,Committee/Volunteer,D:D
-Pending,GUI_Credit Tracker,Pending,AAA
+
+Pending,GUI_Credit Tracker,Pending,A:E
 Credit_Tracker,GUI_Credit Tracker,Printing Credit,A:F
+Loan_Out,GUI_Credit Tracker,On Loan,A:F
+Pending, GUI_Credit Tracker,Pending,A:D

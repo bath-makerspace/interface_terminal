@@ -41,12 +41,12 @@ class sheet_API:
         table_details = self.convert_LUT('Credit_Tracker')
         
         sheet = self.client.open(table_details["spreadsheet_name"]).worksheet(table_details["sheet_name"])
-        col = table_details["col"].split(":")
         
+        col = table_details["col"].split(":")
         start_col = col[0]
         end_col = col[1]
-
         row_values = len(sheet.col_values(1))
+
         date = datetime.now().strftime("%d/%m/%Y")
         date = "'"+str(date) # Ensure date is treated as text in Google Sheets
 
@@ -61,8 +61,68 @@ class sheet_API:
         sheet.update(range_name=target_range, values=[new_row_data],value_input_option='USER_ENTERED')
         print(f"Successfully added row to {table_details['sheet_name']} at {target_range}")
 
-    def add_loan_out_entry(self, Bath_ID, Item, AuthCode):
-        
+    def add_loan_out_entry(self, Bath_ID, Item_Category, Item, AuthCode):
+        on_loan_table_details = self.convert_LUT('Loan_Out')
+        pending_table_details = self.convert_LUT('Pending')
+        inventory_table_details = self.convert_LUT(Item_Category)
+
+        on_loan_sheet = self.client.open(on_loan_table_details["spreadsheet_name"]).worksheet(on_loan_table_details["sheet_name"])
+        pending_sheet = self.client.open(pending_table_details["spreadsheet_name"]).worksheet(pending_table_details["sheet_name"])
+        inventory_sheet = self.client.open(inventory_table_details["spreadsheet_name"]).worksheet(inventory_table_details["sheet_name"])
+
+        on_loan_col = on_loan_table_details["col"].split(":")
+        on_loan_start_col = on_loan_col[0]
+        on_loan_end_col = on_loan_col[1]
+        on_loan_row_values = len(on_loan_sheet.col_values(1))
+        Row_In_OnLoan = on_loan_row_values + 1
+
+        pending_col = pending_table_details["col"].split(":")
+        pending_start_col = pending_col[0]
+        pending_end_col = pending_col[1]
+        pending_row_values = len(pending_sheet.col_values(1))
+
+        inventory_col = inventory_table_details["col"].split(":")
+        inventory_start_col = inventory_col[0]
+        inventory_end_col = inventory_col[1]
+
+        date = datetime.now().strftime("%d/%m/%Y")
+        date = "'"+str(date) # Ensure date is treated as text in Google Sheets
+
+        AuthCode = "'"+AuthCode # Ensure AuthCode is treated as text in Google Sheets
+        Loan_AUTHORISER_FORMULA     = f"=VLOOKUP({on_loan_end_col}{on_loan_row_values + 1},'Committee/Volunteer'!D:F,2,FALSE)"
+
+        # Creating Payload for On Loan Sheet and sending it to Google Sheets
+        new_on_loan_data = [date, Bath_ID, Item_Category, Item, Loan_AUTHORISER_FORMULA, AuthCode]
+        on_loan_target_range = f"{on_loan_start_col}{on_loan_row_values + 1}:{on_loan_end_col}{on_loan_row_values + 1}"
+        on_loan_sheet.update(range_name=on_loan_target_range, values=[new_on_loan_data],value_input_option='USER_ENTERED')
+        print(f"Successfully added row to {on_loan_table_details['sheet_name']} at {on_loan_target_range}")
+
+        # Creating Payload for Pending Sheet and sending it to Google Sheets
+        new_pending_data = [date, Bath_ID, Item_Category, Item, Row_In_OnLoan]
+        pending_target_range = f"{pending_start_col}{pending_row_values + 1}:{pending_end_col}{pending_row_values + 1}"
+        pending_sheet.update(range_name=pending_target_range, values=[new_pending_data],value_input_option='USER_ENTERED')
+        print(f"Successfully added row to {pending_table_details['sheet_name']} at {pending_target_range}")
+
+        # Update Inventory Sheet to be on Loan
+        inventory_table = self.__get_table_column_val(inventory_table_details["spreadsheet_name"], inventory_table_details["sheet_name"], inventory_table_details["col"])
+        for index, item in enumerate(inventory_table):
+            if item["Item Name"] == Item:
+                inventory_row = index + 2 # +1, for header, +1 because index starts at 0
+                Inventory_AUTHORISER_FORMULA = f"=VLOOKUP({inventory_end_col}{inventory_row},'Committee/Volunteer'!D:F,2,FALSE)"
+                inventory_target_range = f"{inventory_start_col}{inventory_row}:{inventory_end_col}{inventory_row}"
+                new_inventory_data = [Item, item["Item Type"], "On Loan", Inventory_AUTHORISER_FORMULA, AuthCode]
+                inventory_sheet.update(range_name=inventory_target_range, values=[new_inventory_data],value_input_option='USER_ENTERED')
+                print(f"Successfully updated {Item} status to On Loan in {inventory_table_details['sheet_name']} at {inventory_target_range}")
+                break
+
+    def get_pending_loans(self):
+        table_details = self.convert_LUT('Pending')
+        table_val = self.__get_table_column_val(table_details["spreadsheet_name"], table_details["sheet_name"], table_details["col"])
+        return table_val
+
+    def add_loan_in_entry(self, Bath_ID, Item, AuthCode):
+        pass
+
 
     def get_possible_auth_code(self) -> list:   
         table_details = self.convert_LUT('Auth_Code')
@@ -108,7 +168,12 @@ class sheet_API:
         all_filaments.append(self.get_markforged())
         return all_filaments
 
+    def get_equipment_inventory(self, category):
+        table_details = self.convert_LUT(category)
+        table_val = self.__get_table_column_val(table_details["spreadsheet_name"], table_details["sheet_name"], table_details["col"])
+        return table_val
+
 if __name__ == "__main__":
     sheet = sheet_API()
-    sheet.add_personal_print_credit("IL356", 100, "9408")
-    # print(sheet.get_f1_75())
+    sheet.add_loan_out_entry("IL356", "IT_Inventory", "Raspberry Pi Zero 2W #1", "9408")
+    
