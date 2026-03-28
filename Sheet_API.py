@@ -2,8 +2,12 @@ import gspread
 import pandas as pd
 import os
 from oauth2client.service_account import ServiceAccountCredentials
+from datetime import datetime
+
+from Bath_Cost_Code import Calculate_Personal_Cost
 
 cwd = os.getcwd()
+
 
 class sheet_API:
     def __init__(self):
@@ -33,7 +37,32 @@ class sheet_API:
             all_rows.append(row_dict)
         return all_rows
 
-    # def __set_table_column_val(self, spreadsheet_name, sheet_name, table_range, new_value):
+    def add_personal_print_credit(self, Bath_ID, Weight, AuthCode):
+        table_details = self.convert_LUT('Credit_Tracker')
+        
+        sheet = self.client.open(table_details["spreadsheet_name"]).worksheet(table_details["sheet_name"])
+        col = table_details["col"].split(":")
+        
+        start_col = col[0]
+        end_col = col[1]
+
+        row_values = len(sheet.col_values(1))
+        date = datetime.now().strftime("%d/%m/%Y")
+        date = "'"+str(date) # Ensure date is treated as text in Google Sheets
+
+        Value = Calculate_Personal_Cost(Weight)
+
+        AuthCode = "'"+AuthCode # Ensure AuthCode is treated as text in Google Sheets
+        AUTHORISER_FORMULA = f"=VLOOKUP(F{row_values + 1},'Committee/Volunteer'!D:F,2,FALSE)"
+
+        new_row_data = [date, Bath_ID, Weight, Value, AUTHORISER_FORMULA, AuthCode]
+        target_range = f"{start_col}{row_values + 1}:{end_col}{row_values + 1}"
+
+        sheet.update(range_name=target_range, values=[new_row_data],value_input_option='USER_ENTERED')
+        print(f"Successfully added row to {table_details['sheet_name']} at {target_range}")
+
+    def add_loan_out_entry(self, Bath_ID, Item, AuthCode):
+        
 
     def get_possible_auth_code(self) -> list:   
         table_details = self.convert_LUT('Auth_Code')
@@ -81,5 +110,5 @@ class sheet_API:
 
 if __name__ == "__main__":
     sheet = sheet_API()
-    print(sheet.get_possible_auth_code())
-    print(sheet.get_f1_75())
+    sheet.add_personal_print_credit("IL356", 100, "9408")
+    # print(sheet.get_f1_75())

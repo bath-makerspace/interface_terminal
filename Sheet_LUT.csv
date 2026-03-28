@@ -4,3 +4,5 @@ F2_85,Inventory,Filament,H:M
 Markforged,Inventory,Filament,O:Q
 IT,Inventory,Equipment Inventory,A:D
 Auth_Code,Committee Info,Committee/Volunteer,D:D
+Pending,GUI_Credit Tracker,Pending,AAA
+Credit_Tracker,GUI_Credit Tracker,Printing Credit,A:F
