@@ -9,17 +9,17 @@ class sheet_API:
     def __init__(self):
         cred_filename = "cred.json"
         cred_path = os.path.join(cwd, cred_filename)
-        
+        self.scopes = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive","https://www.googleapis.com/auth/spreadsheets"]
+        self.creds = ServiceAccountCredentials.from_json_keyfile_name("cred.json", self.scopes)
+        self.client = gspread.authorize(self.creds)
+
 
     def __get_table_column_val(self, spreadsheet_name, sheet_name, table_range):
-        scopes = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive","https://www.googleapis.com/auth/spreadsheets"]
-        creds = ServiceAccountCredentials.from_json_keyfile_name("cred.json", scopes)
-        client = gspread.authorize(creds)
-
+        
         spreadsheet_name = spreadsheet_name.strip()
         sheet_name = sheet_name.strip()
 
-        sheet = client.open(spreadsheet_name).worksheet(sheet_name)
+        sheet = self.client.open(spreadsheet_name).worksheet(sheet_name)
         data = sheet.get_values(table_range)
 
         if not data:
@@ -32,7 +32,16 @@ class sheet_API:
             row_dict = dict(zip(headers, row))
             all_rows.append(row_dict)
         return all_rows
-    
+
+    # def __set_table_column_val(self, spreadsheet_name, sheet_name, table_range, new_value):
+
+    def get_possible_auth_code(self) -> list:   
+        table_details = self.convert_LUT('Auth_Code')
+        table_val = self.__get_table_column_val(table_details["spreadsheet_name"], table_details["sheet_name"], table_details["col"])
+        auth_codes = []
+        for row in table_val:
+            auth_codes.append(row["Auth Key"])
+        return auth_codes
 
     def convert_LUT(self,target_name) -> str:
         csv_filename = "Sheet_LUT.csv"
@@ -50,7 +59,6 @@ class sheet_API:
     
     def get_f1_75(self):
        table_details = self.convert_LUT('F1_75')
-       print(table_details)
        table_val = self.__get_table_column_val(table_details["spreadsheet_name"], table_details["sheet_name"], table_details["col"])
        return table_val
 
@@ -73,5 +81,5 @@ class sheet_API:
 
 if __name__ == "__main__":
     sheet = sheet_API()
-    for row in sheet.get_f1_75():
-        print(row['F1.75_Material Type'], row['Brand'], row['Colour'],row['Weight'], row['Rolls'],row['In Printer'])
+    print(sheet.get_possible_auth_code())
+    print(sheet.get_f1_75())
