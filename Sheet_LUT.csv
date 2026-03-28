@@ -1,0 +1,5 @@
+table, spreadsheet_name, sheet_name, col
+F1_75,Inventory,Filament,A:F
+F2_85,Inventory,Filament,H:M
+Markforged,Inventory,Filament,O:Q
+IT,Inventory,Equipment Inventory,A:D
