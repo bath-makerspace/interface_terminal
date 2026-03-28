@@ -40,6 +40,8 @@ class StartScreen(ttk.Frame):
 
 
 class SignatureScreen(ttk.Frame): # Changed to ttk.Frame
+    canvaswidth = 300
+    canvasheight = 200
     def __init__(self, master):
         super().__init__(master)
         self.master = master
@@ -48,11 +50,11 @@ class SignatureScreen(ttk.Frame): # Changed to ttk.Frame
 
         # Note: Canvas remains tk.Canvas (there is no ttk equivalent)
         # We manually set the highlightthickness to 0 so it blends with the dark theme
-        self.canvas = tk.Canvas(self, bg="white", width=800, height=400,
+        self.canvas = tk.Canvas(self, bg="white", width=self.canvaswidth, height=self.canvasheight,
                                relief="ridge", bd=0, highlightthickness=0)
         self.canvas.pack(pady=20)
 
-        self.image = Image.new("RGB", (800, 400), "white")
+        self.image = Image.new("RGB", (self.canvaswidth, self.canvasheight), "white")
         self.draw = ImageDraw.Draw(self.image)
         self.last_x, self.last_y = None, None
 
@@ -84,7 +86,7 @@ class SignatureScreen(ttk.Frame): # Changed to ttk.Frame
 
     def clear(self):
         self.canvas.delete("all")
-        self.image = Image.new("RGB", (800, 400), "white")
+        self.image = Image.new("RGB", (self.canvaswidth , self.canvasheight), "white")
         self.draw = ImageDraw.Draw(self.image)
 
     def save_sig(self):
