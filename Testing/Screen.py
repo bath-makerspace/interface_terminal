@@ -82,15 +82,16 @@ class PaymentInputScreen(ttk.Frame):
         self.cost_display = ttk.Label(self, text="Cost: £0.00", font=("Arial", 16, "bold"))
         self.cost_display.pack(pady=10)
 
-        ttk.Label(self, text="Auth Code (Committee will fill in when you pay!)", font=("Arial", 12)).pack()
-        self.print_mass = ttk.Entry(self, font=("Arial", 14), width=15)
-        self.print_mass.pack(pady=10)
-        self.print_mass.bind("<Button-1>", lambda e: self.master.open_keyboard(mode="numeric"))
+        ttk.Label(self, text="Authentication Key", font=("Arial", 12)).pack()
+        ttk.Label(self, text="(Committee Will Fill When You Pay)", font=("Arial", 12)).pack()
+        self.auth_key = ttk.Entry(self, font=("Arial", 14), width=15)
+        self.auth_key.pack(pady=10)
+        self.auth_key.bind("<Button-1>", lambda e: self.master.open_keyboard(mode="numeric"))
         # Run calculation AND close keyboard when 'Enter' is pressed
-        self.print_mass.bind("<Return>", self.handle_enter_key)
+        self.auth_key.bind("<Return>", self.handle_enter_key)
 
         btn_frame = ttk.Frame(self)
-        btn_frame.pack(pady=10)
+        btn_frame.pack(pady=20)
 
         ttk.Button(btn_frame, text="Save & Exit", style="Accent.TButton",
                    command=self.handle_save).pack(side="left", padx=10)
@@ -165,9 +166,9 @@ class EquipChoiceScreen(ttk.Frame):
 class SignatureScreen(ttk.Frame): # Changed to ttk.Frame
     canvaswidth = 300
     canvasheight = 200
-    # def __init__(self, master):
-    #     super().__init__(master)
-    #     self.master = master
+    def __init__(self, master):
+        super().__init__(master)
+        self.master = master
 
         ttk.Label(self, text="Please Sign Below", font=("Arial", 18)).pack(pady=10)
 
@@ -194,8 +195,8 @@ class SignatureScreen(ttk.Frame): # Changed to ttk.Frame
         ttk.Button(btn_frame, text="Clear",
                   command=self.clear).pack(side="left", padx=20)
 
-        # ttk.Button(btn_frame, text="Back to Home",
-        #           command=lambda: master.switch_frame(StartScreen)).pack(side="left", padx=20)
+        ttk.Button(btn_frame, text="Back to Home",
+                  command=lambda: master.switch_frame(StartScreen)).pack(side="left", padx=20)
 
     def paint(self, event):
         if self.last_x and self.last_y:
@@ -214,6 +215,7 @@ class SignatureScreen(ttk.Frame): # Changed to ttk.Frame
 
     def save_sig(self):
         self.image.save("signature.png")
+        self.master.switch_frame(StartScreen)
 
 if __name__ == "__main__":
     app = App()
