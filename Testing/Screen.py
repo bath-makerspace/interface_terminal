@@ -53,6 +53,17 @@ class App(tk.Tk):
         self.focus_set()
         self.update_price()
 
+    def update_price(self):
+        raw_val = self.print_mass.get()
+        if raw_val:
+            try:
+                price = Calculate_Personal_Cost(raw_val)
+                self.cost_display.config(text=f"Cost: £{float(price):.2f}")
+                return price
+            except ValueError:
+                self.cost_display.config(text="Invalid Mass!")
+        return 0
+
 
 from tkinter import messagebox  # Add this to your imports at the top
 
@@ -148,6 +159,7 @@ class PaymentInputScreen(ttk.Frame):
         self.signed = False  # Reset signature status
 
     def handle_enter_key(self, event):
+        self.update_price()
         self.master.close_keyboard()
 
     def update_price(self):
