@@ -53,22 +53,28 @@ class App(tk.Tk):
         self.focus_set()
 
 
+from tkinter import messagebox  # Add this to your imports at the top
+
+
 class PaymentInputScreen(ttk.Frame):
-    canvaswidth = 400  # Made slightly larger for the wide layout
+    canvaswidth = 400
     canvasheight = 250
-    signed = 0
 
     def __init__(self, master):
         super().__init__(master)
         self.master = master
+        self.signed = False  # Track if the user has signed
 
-        # Bind the background of this screen to close the keyboard
+        # Ensure the signatures folder exists so we don't crash on save
+        if not os.path.exists("signatures"):
+            os.makedirs("signatures")
+
         self.bind("<Button-1>", lambda e: self.master.close_keyboard())
 
         # 1. TOP TITLE
         ttk.Label(self, text="Log 3D Print Debt", font=("Arial", 24, "bold")).pack(pady=20)
 
-        # 2. MAIN CONTENT AREA (Horizontal Container)
+        # 2. MAIN CONTENT AREA
         content_container = ttk.Frame(self)
         content_container.pack(fill="both", expand=True, padx=50)
 
@@ -80,7 +86,6 @@ class PaymentInputScreen(ttk.Frame):
         self.username = ttk.Entry(left_col, font=("Arial", 14))
         self.username.pack(fill="x", pady=(0, 15))
         self.username.bind("<Button-1>", lambda e: self.master.open_keyboard(mode="full"))
-        self.username.bind("<Return>", lambda e: self.master.close_keyboard())
 
         ttk.Label(left_col, text="Print Mass (nearest gram)", font=("Arial", 12)).pack(anchor="w")
         self.print_mass = ttk.Entry(left_col, font=("Arial", 14))
@@ -89,11 +94,10 @@ class PaymentInputScreen(ttk.Frame):
         self.print_mass.bind("<Return>", self.handle_enter_key)
 
         ttk.Label(left_col, text="Authentication Key", font=("Arial", 12)).pack(anchor="w")
-        ttk.Label(left_col, text="(Only fill if paying now)", font=("Arial", 12)).pack(anchor="w")
+        ttk.Label(left_col, text="(Only fill if paying now - 4 digits)", font=("Arial", 10, "italic")).pack(anchor="w")
         self.auth_key = ttk.Entry(left_col, font=("Arial", 14))
         self.auth_key.pack(fill="x", pady=(0, 10))
         self.auth_key.bind("<Button-1>", lambda e: self.master.open_keyboard(mode="numeric"))
-        self.auth_key.bind("<Return>", self.handle_enter_key)
 
         self.cost_display = ttk.Label(left_col, text="Cost: £0.00", font=("Arial", 18, "bold"))
         self.cost_display.pack(pady=10)
@@ -103,19 +107,16 @@ class PaymentInputScreen(ttk.Frame):
         right_col.pack(side="left", fill="both", expand=True, padx=20)
 
         ttk.Label(right_col, text="Please Sign Below", font=("Arial", 12)).pack()
-
         self.canvas = tk.Canvas(right_col, bg="white", width=self.canvaswidth, height=self.canvasheight,
                                 relief="ridge", bd=2, highlightthickness=0)
         self.canvas.pack(pady=10)
 
-        # PIL Image setup
         self.image = Image.new("RGB", (self.canvaswidth, self.canvasheight), "white")
         self.draw = ImageDraw.Draw(self.image)
         self.last_x, self.last_y = None, None
 
         self.canvas.bind("<B1-Motion>", self.paint)
         self.canvas.bind("<ButtonRelease-1>", self.reset_coords)
-
         ttk.Button(right_col, text="Clear Signature", command=self.clear).pack()
 
         # 3. BOTTOM BUTTON BAR
@@ -128,16 +129,13 @@ class PaymentInputScreen(ttk.Frame):
         ttk.Button(btn_frame, text="Cancel",
                    command=lambda: self.master.switch_frame(StartScreen)).pack(side="left", padx=20, ipadx=20, ipady=10)
 
-    # --- Methods remain mostly the same, but ensure they point to correct variables ---
-
     def paint(self, event):
         if self.last_x and self.last_y:
             self.canvas.create_line(self.last_x, self.last_y, event.x, event.y,
                                     width=4, fill="black", capstyle=tk.ROUND, smooth=True)
             self.draw.line([self.last_x, self.last_y, event.x, event.y], fill="black", width=4)
+            self.signed = True  # User has started drawing
         self.last_x, self.last_y = event.x, event.y
-        if self.signed == 0:
-            signed = 1
 
     def reset_coords(self, event):
         self.last_x, self.last_y = None, None
@@ -146,6 +144,7 @@ class PaymentInputScreen(ttk.Frame):
         self.canvas.delete("all")
         self.image = Image.new("RGB", (self.canvaswidth, self.canvasheight), "white")
         self.draw = ImageDraw.Draw(self.image)
+        self.signed = False  # Reset signature status
 
     def handle_enter_key(self, event):
         self.update_price()
@@ -163,38 +162,29 @@ class PaymentInputScreen(ttk.Frame):
         return 0
 
     def handle_save(self):
-        user = self.username.get()
+        user = self.username.get().strip()
         price = self.update_price()
-        auth = self.auth_key.get()
-        issigned = self.signed
-        if user and price and issigned== 1:
-            # Save the signature named by the user to avoid overwriting
-            self.image.save(f"signatures/{user}_sig.png")
+        auth = self.auth_key.get().strip()
 
+        # Validation Logic
+        auth_valid = (auth == "" or (len(auth) == 4 and auth.isdigit()))
+
+        if not user:
+            messagebox.showwarning("Incomplete", "Please enter a Username.")
+        elif price <= 0:
+            messagebox.showwarning("Incomplete", "Please enter a valid Print Mass.")
+        elif not self.signed:
+            messagebox.showwarning("Incomplete", "Please provide a signature.")
+        elif not auth_valid:
+            messagebox.showwarning("Invalid Auth", "Auth Key must be empty or a 4-digit number.")
+        else:
+            # All checks pass - Save data
+            self.image.save(f"signatures/{user}_sig.png")
             with open("entries.csv", "a", newline="") as f:
                 csv.writer(f).writerow([user, price, auth])
+
+            messagebox.showinfo("Success", "Debt logged successfully!")
             self.master.switch_frame(StartScreen)
-
-class StartScreen(ttk.Frame):
-    def __init__(self, master):
-        super().__init__(master)
-
-        label = ttk.Label(self, text="Welcome To The Makerspace Debt Portal", font=("Arial", 24))
-        label.pack(pady=100)
-
-        # Using style="Accent.TButton" (provided by sv_ttk) for the primary action
-        # btn1 = ttk.Button(self, text="Test Signature Pad",
-        #                  style="Accent.TButton",
-        #                  command=lambda: master.switch_frame(SignatureScreen))
-        # btn1.pack(ipadx=20, ipady=10, pady=10)
-
-        btn2 = ttk.Button(self, text="Log 3D Print Debt",
-                         command=lambda: master.switch_frame(PaymentChoiceScreen))
-        btn2.pack(ipadx=20, ipady=10, pady=10)
-
-        btn2 = ttk.Button(self, text="Equipment",
-                         command=lambda: master.switch_frame(EquipChoiceScreen))
-        btn2.pack(ipadx=20, ipady=10, pady=10)
 
 class EquipChoiceScreen(ttk.Frame):
     def __init__(self, master):
