@@ -118,9 +118,10 @@ class PaymentInputScreen(ttk.Frame):
     def handle_save(self):
         user = self.username.get()
         price = self.update_price()
-        if user and price:
+        auth = self.auth_key.get()
+        if user and price and auth:
             with open("entries.csv", "a", newline="") as f:
-                csv.writer(f).writerow([user, price])
+                csv.writer(f).writerow([user, price, auth])
             self.master.switch_frame(StartScreen)
 
 class StartScreen(ttk.Frame):
