@@ -4,7 +4,7 @@ import os
 from oauth2client.service_account import ServiceAccountCredentials
 from datetime import datetime
 
-from Bath_Cost_Code import Calculate_Personal_Cost
+from Testing.Bath_Cost_Code import Calculate_Personal_Cost
 
 cwd = os.getcwd()
 
