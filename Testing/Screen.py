@@ -82,11 +82,15 @@ class PaymentInputScreen(ttk.Frame):
         self.cost_display = ttk.Label(self, text="Cost: £0.00", font=("Arial", 16, "bold"))
         self.cost_display.pack(pady=20)
 
+        ttk.Label(self, text="Auth Code (Committee will fill in when you pay!)", font=("Arial", 12)).pack()
+        self.print_mass = ttk.Entry(self, font=("Arial", 14), width=15)
+        self.print_mass.pack(pady=10)
+        self.print_mass.bind("<Button-1>", lambda e: self.master.open_keyboard(mode="numeric"))
+        # Run calculation AND close keyboard when 'Enter' is pressed
+        self.print_mass.bind("<Return>", self.handle_enter_key)
+
         btn_frame = ttk.Frame(self)
         btn_frame.pack(pady=20)
-
-        ttk.Button(btn_frame, text="Calculate Cost", style="Accent.TButton",
-                   command=self.update_price).pack(side="left", padx=10)
 
         ttk.Button(btn_frame, text="Save & Exit", style="Accent.TButton",
                    command=self.handle_save).pack(side="left", padx=10)
