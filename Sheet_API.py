@@ -37,6 +37,15 @@ class sheet_API:
             all_rows.append(row_dict)
         return all_rows
 
+    def __col_to_num(self,col_str):
+        num = 0
+        for c in col_str:
+            if 'A' <= c <= 'Z':
+                num = num * 26 + (ord(c) - ord('A') + 1)
+            else:
+                raise ValueError(f"Invalid column string: {col_str}")
+        return num
+
     def add_personal_print_credit(self, Bath_ID, Weight, AuthCode=""):
         table_details = self.convert_LUT('Credit_Tracker')
                     
@@ -77,7 +86,9 @@ class sheet_API:
                     pending_sheet.update(range_name=pending_target_range, values=[new_pending_data],value_input_option='USER_ENTERED')
                     print(f"Successfully added row to {pending_table_details['sheet_name']} at {pending_target_range}")
                     return
-            pending_target_range = f"{pending_table_details['col'].split(':')[0]}{len(pending_sheet.col_values(1))+1}:{pending_table_details['col'].split(':')[1]}{len(pending_sheet.col_values(1))+1}"
+            pending_col = pending_table_details["col"].split(":")
+            pending_start_col = pending_col[0]
+            pending_target_range = f"{pending_table_details['col'].split(':')[0]}{len(pending_sheet.col_values(self.__col_to_num(pending_start_col)))+1}:{pending_table_details['col'].split(':')[1]}{len(pending_sheet.col_values(self.__col_to_num(pending_start_col)))+1}"
             pending_sheet.update(range_name=pending_target_range, values=[[Bath_ID, Weight, Value,str(row_values + 1)]],value_input_option='USER_ENTERED')
 
     def add_loan_out_entry(self, Bath_ID, Item_Category, Item, AuthCode):
@@ -148,16 +159,27 @@ class sheet_API:
         pending_payment_details = self.convert_LUT('Pending_Payment')
         pending_payment_sheet = self.client.open(pending_payment_details["spreadsheet_name"]).worksheet(pending_payment_details["sheet_name"])
         pending_payment_table = self.__get_table_column_val(pending_payment_details["spreadsheet_name"], pending_payment_details["sheet_name"], pending_payment_details["col"])
-        pending_payment_sheet.delete_rows(2)
-        # for index, item in enumerate(pending_payment_table):
-        #     if item["Bath ID"] == Bath_ID:
-        #         pending_row = index + 2 # +1, for header, +1 because index starts at 0
-        #         pending_target_range = f"{pending_payment_details['col'].split(':')[0]}{pending_row}:{pending_payment_details['col'].split(':')[1]}{pending_row}"
-        #         pending_payment_sheet.update(range_name=pending_target_range, values=[[item["Bath ID"], item["Weight"], item["Value"], item["Row_in_Printing_Credit"], AuthCode]],value_input_option='USER_ENTERED')
-        #         print(f"Successfully completed pending payment for {Bath_ID} in {pending_payment_details['sheet_name']} at {pending_target_range}")
-        #         return
+        rows_to_update = []
+        for index, item in enumerate(pending_payment_table):
+            if item["Bath ID"] == Bath_ID:
+                pending_row = index + 2 # +1, for header, +1 because index starts at 0
+                rows_to_update = [int(row) for row in item["Row_in_Printing_Credit"].split(",")]
+                pending_target_range = f"{pending_payment_details['col'].split(':')[0]}{pending_row}:{pending_payment_details['col'].split(':')[1]}{pending_row}"
+                pending_payment_sheet.update(range_name=pending_target_range, values=[["", "", "", ""]],value_input_option='USER_ENTERED')
+                print(f"Successfully completed pending payment for {Bath_ID} in {pending_payment_details['sheet_name']} at {pending_target_range}")
+                break
+        
+        AuthCode = "'" + AuthCode # Ensure AuthCode is treated as text in Google Sheets
+
+        printing_credit_details = self.convert_LUT('Credit_AuthCode')
+        printing_credit_sheet = self.client.open(printing_credit_details["spreadsheet_name"]).worksheet(printing_credit_details["sheet_name"])
+        for row in rows_to_update:
+            printing_credit_target_range = f"{printing_credit_details['col'].split(':')[0]}{row}:{printing_credit_details['col'].split(':')[1]}{row}"
+            printing_credit_sheet.update(range_name=printing_credit_target_range, values=[[AuthCode]],value_input_option='USER_ENTERED')
+            print(f"Successfully completed pending payment for {Bath_ID} in {printing_credit_details['sheet_name']} at {printing_credit_target_range}")
 
     def add_loan_in_entry(self, Bath_ID, Item, AuthCode):
+        pending
         pass
 
 
@@ -212,6 +234,7 @@ class sheet_API:
 
 if __name__ == "__main__":
     sheet = sheet_API()
+
     sheet.add_personal_print_credit("IL356", 11)
     sheet.add_personal_print_credit("IL356", 40, "9408")
     sheet.add_loan_out_entry("IL356", "IT_Inventory", "Raspberry Pi Zero 2W #1", "9408")

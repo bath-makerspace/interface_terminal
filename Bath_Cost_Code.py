@@ -1,7 +1,7 @@
-def Calculate_Personal_Cost(str: Weight_String) -> float:
+def Calculate_Personal_Cost(Weight_String: str) -> float:
     try:
         # Convert the string from the Entry box to a number
-        Weight = float(Weight_String)
+        Weight = int(Weight_String)
 
         tier_1_threshold = 70
         tier_1_cost_per_gram = 0.06
