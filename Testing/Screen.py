@@ -188,7 +188,7 @@ class StartScreen(ttk.Frame):
         super().__init__(master)
 
         label = ttk.Label(self, text="Welcome to the Makerspace Portal,", font=("Arial", 24))
-        label.pack()
+        label.pack(pady=0)
         label1 = ttk.Label(self, text="what would you like to access?", font=("Arial", 24))
         label1.pack(pady=100)
 
