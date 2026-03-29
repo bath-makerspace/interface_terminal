@@ -88,6 +88,7 @@ class PaymentInputScreen(ttk.Frame):
         self.print_mass.bind("<Return>", self.handle_enter_key)
 
         ttk.Label(left_col, text="Authentication Key", font=("Arial", 12)).pack(anchor="w")
+        ttk.Label(left_col, text="(Only fill if paying now)", font=("Arial", 12)).pack(anchor="w")
         self.auth_key = ttk.Entry(left_col, font=("Arial", 14))
         self.auth_key.pack(fill="x", pady=(0, 10))
         self.auth_key.bind("<Button-1>", lambda e: self.master.open_keyboard(mode="numeric"))
@@ -95,8 +96,6 @@ class PaymentInputScreen(ttk.Frame):
 
         self.cost_display = ttk.Label(left_col, text="Cost: £0.00", font=("Arial", 18, "bold"))
         self.cost_display.pack(pady=10)
-
-        ttk.Button(left_col, text="Update Cost", command=self.update_price).pack(pady=5)
 
         # --- RIGHT COLUMN (Signature) ---
         right_col = ttk.Frame(content_container)
@@ -212,8 +211,24 @@ class EquipChoiceScreen(ttk.Frame):
                          command=lambda: master.switch_frame(StartScreen))
         btn3.pack(ipadx=20, ipady=10, pady=10)
 
-class SignatureScreen(ttk.Frame): # Changed to ttk.Frame
-    pass
+class PaymentChoiceScreen(ttk.Frame):
+    def __init__(self, master):
+        super().__init__(master)
+
+        label = ttk.Label(self, text="", font=("Arial", 24))
+        label.pack(pady=100)
+
+        btn1 = ttk.Button(self, text="Log New Print Debt",
+                         command=lambda: master.switch_frame(PaymentInputScreen))
+        btn1.pack(ipadx=20, ipady=10, pady=10)
+
+        btn2 = ttk.Button(self, text="Mark Debt As Paid",
+                         command=lambda: master.switch_frame(PaymentUpdateScreen))
+        btn2.pack(ipadx=20, ipady=10, pady=10)
+
+        btn3 = ttk.Button(self, text="Cancel",
+                         command=lambda: master.switch_frame(StartScreen))
+        btn3.pack(ipadx=20, ipady=10, pady=10)
 
 if __name__ == "__main__":
     app = App()
