@@ -267,7 +267,7 @@ class EquipChoiceScreen(ttk.Frame):
         super().__init__(master)
 
         label = ttk.Label(self, text="", font=("Arial", 24))
-        label.pack(pady=75)
+        label.pack(pady=10)
 
         btn1 = ttk.Button(self, text="Loaning Equipment",
                          command=lambda: master.switch_frame(EquipLoanScreen))
@@ -286,7 +286,7 @@ class PaymentChoiceScreen(ttk.Frame):
         super().__init__(master)
 
         label = ttk.Label(self, text="", font=("Arial", 24))
-        label.pack(pady=75)
+        label.pack(pady=10)
 
         btn1 = ttk.Button(self, text="Log New Print Debt",
                          command=lambda: master.switch_frame(PaymentInputScreen))
