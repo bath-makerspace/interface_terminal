@@ -9,15 +9,41 @@ from Bath_Cost_Code import Calculate_Personal_Cost
 from tkinter import messagebox
 from datetime import datetime
 
+
 class App(tk.Tk):
     def __init__(self):
         super().__init__()
-        self.title("Makerspace Information Terminal")
+        # 1. Hide the window for a split second while we prep
+        self.withdraw()
+
+        self.title("Makerspace Debt Portal")
         self.geometry("1024x600")
+
+        # 2. Load the logo ONCE here so it's ready for any screen
+        self.logo_image = self.load_logo()
 
         self.kb_process = None
         self.current_frame = None
+
+        # 3. Bring the window back and start
+        self.deiconify()
         self.switch_frame(StartScreen)
+
+    def load_logo(self):
+        try:
+            original_logo = Image.open("your_logo.png").convert("RGBA")
+            logo_resized = original_logo.resize((400, 400), Image.Resampling.LANCZOS)
+
+            # Opacity logic
+            alpha = logo_resized.split()[3]
+            alpha = ImageEnhance.Brightness(alpha).enhance(0.1)
+            logo_resized.putalpha(alpha)
+
+            # Tie the image to 'self' (the root)
+            return ImageTk.PhotoImage(logo_resized, master=self)
+        except Exception as e:
+            print(f"Logo error: {e}")
+            return None
 
     def switch_frame(self, frame_class):
         self.close_keyboard()
@@ -217,22 +243,12 @@ class PaymentInputScreen(ttk.Frame):
 
 class StartScreen(ttk.Frame):
     def __init__(self, master):
-
         super().__init__(master)
         self.master = master
 
-        # Inside StartScreen __init__
-        try:
-            original_logo = Image.open("transparent_png_logo_final.png").convert("RGBA")
-            logo_resized = original_logo.resize((800, 800), Image.Resampling.LANCZOS)
-
-            # Adjust opacity
-            alpha = logo_resized.split()[3]
-            alpha = ImageEnhance.Brightness(alpha).enhance(0.1)
-            logo_resized.putalpha(alpha)
-
-            # --- THE FIX IS HERE: Add 'master=self.master' ---
-            self.bg_image = ImageTk.PhotoImage(logo_resized, master=self.master)
+        # Just reference the image we already loaded in App
+        if self.master.logo_image:
+            self.bg_label = tk.Label(self, image=self.master.logo_image
 
             # Place the label
             self.bg_label = tk.Label(self, image=self.bg_image)
