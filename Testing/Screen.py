@@ -90,6 +90,56 @@ class PaymentInputScreen(ttk.Frame):
         # Run calculation AND close keyboard when 'Enter' is pressed
         self.auth_key.bind("<Return>", self.handle_enter_key)
 
+        canvaswidth = 300
+        canvasheight = 200
+
+        ttk.Label(self, text="Please Sign Below", font=("Arial", 18)).pack(pady=10)
+
+        # Note: Canvas remains tk.Canvas (there is no ttk equivalent)
+        # We manually set the highlightthickness to 0 so it blends with the dark theme
+        self.canvas = tk.Canvas(self, bg="white", width=self.canvaswidth, height=self.canvasheight,
+                                relief="ridge", bd=0, highlightthickness=0)
+        self.canvas.pack(pady=20)
+
+        self.image = Image.new("RGB", (self.canvaswidth, self.canvasheight), "white")
+        self.draw = ImageDraw.Draw(self.image)
+        self.last_x, self.last_y = None, None
+
+        self.canvas.bind("<B1-Motion>", self.paint)
+        self.canvas.bind("<ButtonRelease-1>", self.reset_coords)
+
+        btn_frame = ttk.Frame(self)  # Changed to ttk.Frame
+        btn_frame.pack(pady=10)
+
+        # ttk.Buttons do not support 'bg' or 'fg'. sv_ttk uses styles instead.
+        ttk.Button(btn_frame, text="Save & Close", style="Accent.TButton",
+                   command=self.save_sig).pack(side="left", padx=20)
+
+        ttk.Button(btn_frame, text="Clear",
+                   command=self.clear).pack(side="left", padx=20)
+
+        ttk.Button(btn_frame, text="Back to Home",
+                   command=lambda: master.switch_frame(StartScreen)).pack(side="left", padx=20)
+
+    def paint(self, event):
+        if self.last_x and self.last_y:
+            self.canvas.create_line(self.last_x, self.last_y, event.x, event.y,
+                                    width=4, fill="black", capstyle=tk.ROUND, smooth=True)
+            self.draw.line([self.last_x, self.last_y, event.x, event.y], fill="black", width=4)
+        self.last_x, self.last_y = event.x, event.y
+
+    def reset_coords(self, event):
+        self.last_x, self.last_y = None, None
+
+    def clear(self):
+        self.canvas.delete("all")
+        self.image = Image.new("RGB", (self.canvaswidth, self.canvasheight), "white")
+        self.draw = ImageDraw.Draw(self.image)
+
+    def save_sig(self):
+        self.image.save("signature.png")
+        self.master.switch_frame(StartScreen)
+
         btn_frame = ttk.Frame(self)
         btn_frame.pack(pady=20)
 
@@ -165,58 +215,7 @@ class EquipChoiceScreen(ttk.Frame):
         btn3.pack(ipadx=20, ipady=10, pady=10)
 
 class SignatureScreen(ttk.Frame): # Changed to ttk.Frame
-    canvaswidth = 300
-    canvasheight = 200
-    def __init__(self, master):
-        super().__init__(master)
-        self.master = master
-
-        ttk.Label(self, text="Please Sign Below", font=("Arial", 18)).pack(pady=10)
-
-        # Note: Canvas remains tk.Canvas (there is no ttk equivalent)
-        # We manually set the highlightthickness to 0 so it blends with the dark theme
-        self.canvas = tk.Canvas(self, bg="white", width=self.canvaswidth, height=self.canvasheight,
-                               relief="ridge", bd=0, highlightthickness=0)
-        self.canvas.pack(pady=20)
-
-        self.image = Image.new("RGB", (self.canvaswidth, self.canvasheight), "white")
-        self.draw = ImageDraw.Draw(self.image)
-        self.last_x, self.last_y = None, None
-
-        self.canvas.bind("<B1-Motion>", self.paint)
-        self.canvas.bind("<ButtonRelease-1>", self.reset_coords)
-
-        btn_frame = ttk.Frame(self) # Changed to ttk.Frame
-        btn_frame.pack(pady=10)
-
-        # ttk.Buttons do not support 'bg' or 'fg'. sv_ttk uses styles instead.
-        ttk.Button(btn_frame, text="Save & Close", style="Accent.TButton",
-                  command=self.save_sig).pack(side="left", padx=20)
-
-        ttk.Button(btn_frame, text="Clear",
-                  command=self.clear).pack(side="left", padx=20)
-
-        ttk.Button(btn_frame, text="Back to Home",
-                  command=lambda: master.switch_frame(StartScreen)).pack(side="left", padx=20)
-
-    def paint(self, event):
-        if self.last_x and self.last_y:
-            self.canvas.create_line(self.last_x, self.last_y, event.x, event.y,
-                                    width=4, fill="black", capstyle=tk.ROUND, smooth=True)
-            self.draw.line([self.last_x, self.last_y, event.x, event.y], fill="black", width=4)
-        self.last_x, self.last_y = event.x, event.y
-
-    def reset_coords(self, event):
-        self.last_x, self.last_y = None, None
-
-    def clear(self):
-        self.canvas.delete("all")
-        self.image = Image.new("RGB", (self.canvaswidth , self.canvasheight), "white")
-        self.draw = ImageDraw.Draw(self.image)
-
-    def save_sig(self):
-        self.image.save("signature.png")
-        self.master.switch_frame(StartScreen)
+    pass
 
 if __name__ == "__main__":
     app = App()
