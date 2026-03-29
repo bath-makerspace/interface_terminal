@@ -1,6 +1,6 @@
 import tkinter as tk
 from tkinter import ttk
-from PIL import Image, ImageDraw
+from PIL import Image, ImageDraw, ImageTk, ImageEnhance
 import csv
 import sv_ttk
 import os
@@ -214,26 +214,49 @@ class PaymentInputScreen(ttk.Frame):
             messagebox.showinfo("Success", "Debt logged successfully!")
             self.master.switch_frame(StartScreen)
 
+
 class StartScreen(ttk.Frame):
     def __init__(self, master):
         super().__init__(master)
+        self.master = master
 
-        label = ttk.Label(self, text="Welcome to the Makerspace Portal", font=("Arial", 24))
-        label.pack(pady=100)
+        # --- BACKGROUND LOGO LOGIC ---
+        try:
+            # 1. Load the original image
+            original_logo = Image.open("your_logo.png").convert("RGBA")
 
-        # Using style="Accent.TButton" (provided by sv_ttk) for the primary action
-        # btn1 = ttk.Button(self, text="Test Signature Pad",
-        #                  style="Accent.TButton",
-        #                  command=lambda: master.switch_frame(SignatureScreen))
-        # btn1.pack(ipadx=20, ipady=10, pady=10)
+            # 2. Resize it (e.g., to 400x400 or whatever fits your 1024x600 screen)
+            logo_resized = original_logo.resize((400, 400), Image.Resampling.LANCZOS)
 
-        btn2 = ttk.Button(self, text="3D Printing services",
-                         command=lambda: master.switch_frame(PaymentChoiceScreen))
-        btn2.pack(ipadx=20, ipady=10, pady=10)
+            # 3. Adjust Opacity (0.1 is 10% opacity, 0.2 is 20%, etc.)
+            alpha = logo_resized.split()[3]
+            alpha = ImageEnhance.Brightness(alpha).enhance(0.1)
+            logo_resized.putalpha(alpha)
 
-        btn2 = ttk.Button(self, text="Equipment services",
-                         command=lambda: master.switch_frame(EquipChoiceScreen))
-        btn2.pack(ipadx=20, ipady=10, pady=10)
+            # 4. Convert to a format Tkinter understands
+            self.bg_image = ImageTk.PhotoImage(logo_resized)
+
+            # 5. Create a label to hold the image and place it in the center
+            # We use a standard tk.Label here so we can set a transparent background
+            self.bg_label = tk.Label(self, image=self.bg_image)
+            self.bg_label.place(relx=0.5, rely=0.5, anchor="center")
+
+        except FileNotFoundError:
+            print("Logo file not found, skipping background image.")
+
+        # --- EXISTING BUTTONS ---
+        # The buttons will naturally sit on top of the placed image
+        label = ttk.Label(self, text="Welcome To The Makerspace Debt Portal",
+                          font=("Arial", 24, "bold"))
+        label.pack(pady=(80, 40))  # More top padding to move text off the logo center
+
+        btn1 = ttk.Button(self, text="Log 3D Print Debt",
+                          command=lambda: master.switch_frame(PaymentChoiceScreen))
+        btn1.pack(ipadx=20, ipady=15, pady=10)
+
+        btn2 = ttk.Button(self, text="Equipment Portal",
+                          command=lambda: master.switch_frame(EquipChoiceScreen))
+        btn2.pack(ipadx=20, ipady=15, pady=10)
 
 class EquipChoiceScreen(ttk.Frame):
     def __init__(self, master):
