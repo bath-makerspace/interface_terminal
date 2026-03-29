@@ -79,16 +79,8 @@ class App(tk.Tk):
 
     def get_unpaid_debts(self):
         """Returns rows from entries.csv where column 4 (Auth) is missing."""
-        unpaid = []
-        if os.path.exists("entries.csv"):
-            with open("entries.csv", "r") as f:
-                reader = csv.reader(f)
-                for row in reader:
-                    # Indexing: 0:Time, 1:User, 2:Cost, 3:Auth
-                    if len(row) >= 3:
-                        auth = row[3] if len(row) > 3 else ""
-                        if not auth.strip():
-                            unpaid.append(row)
+        unpaid = sheet.get_pending_payments()
+        
         return unpaid
 
 class PaymentInputScreen(ttk.Frame):
@@ -602,8 +594,7 @@ class PaymentUpdateScreen(ttk.Frame):
         else:
             for row in self.unpaid_list:
                 # Show Date, User, and Cost in the list
-                date_short = row[0][:10]  # Just the YYYY-MM-DD part
-                self.debt_listbox.insert(tk.END, f"  {date_short} | {row[1]} - £{float(row[2]):.2f}")
+                self.debt_listbox.insert(tk.END, f"{row["Bath ID"]} - £{float(row["Value"]):.2f}")
 
         scrollbar = ttk.Scrollbar(list_container, orient="vertical", command=self.debt_listbox.yview)
         scrollbar.pack(side="right", fill="y")
@@ -634,32 +625,22 @@ class PaymentUpdateScreen(ttk.Frame):
         auth = self.auth_key.get().strip()
         selection = self.debt_listbox.curselection()
 
-        if not selection or not (len(auth) == 4 and auth.isdigit()):
-            messagebox.showwarning("Error", "Select a record and enter a 4-digit Auth Key.")
-            return
+        auth_valid = (len(auth) == 4 and auth.isdigit())
 
+
+        if auth_valid and auth != "":
+            auth_code_list = sheet.get_possible_auth_code()
+            if auth in auth_code_list:
+                auth_valid = True
+            else:
+                auth_valid = False
+    
         selected_row_data = self.unpaid_list[selection[0]]
-        all_rows = []
-        updated = False
-
-        # Read and find the matching row using the unique timestamp + user + cost
-        with open("entries.csv", "r") as f:
-            reader = csv.reader(f)
-            for row in reader:
-                if not updated and row == selected_row_data:
-                    # Column 0: Time, 1: User, 2: Cost, 3: Auth
-                    if len(row) < 4:
-                        row.append(auth)
-                    else:
-                        row[3] = auth
-                    updated = True
-                all_rows.append(row)
-
-        with open("entries.csv", "w", newline="") as f:
-            writer = csv.writer(f)
-            writer.writerows(all_rows)
-
-        messagebox.showinfo("Success", "Record updated.")
+        if auth_valid:
+            sheet.complete_pending_payment(Bath_ID=selected_row_data["Bath ID"], AuthCode=auth)
+            messagebox.showinfo("Success", "Record updated.")
+        else:
+            messagebox.showwarning("Invalid Auth", "Auth Key must be 4 digits and valid.")
         self.master.switch_frame(StartScreen)
 
 if __name__ == "__main__":

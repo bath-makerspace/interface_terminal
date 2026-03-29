@@ -309,12 +309,14 @@ if __name__ == "__main__":
     # items = sheet.get_available_equipment_inventory("Mechanical_tools")
     # for item in items:
     #     print(item)
-    sheet.add_personal_print_credit("HH940", 11,Signature_path= "2.png")
+    # sheet.add_personal_print_credit("HH940", 11,Signature_path= "2.png")
     # sheet.add_personal_print_credit("IL356", 11)
     # sheet.add_personal_print_credit("IL356", 40, "9408")
     # sheet.add_loan_out_entry("IL356", "IT_Inventory", "Raspberry Pi Zero 2W #1", "9408")
     # sheet.add_loan_in_entry("IL356", "IT_Inventory", "Raspberry Pi Zero 2W #1", "9408")
-    # print(sheet.get_pending_payments())
+    data = sheet.get_pending_payments()
+    for item in data:
+        print(item)
     # sheet.complete_pending_payment("HH940", "9408")
     # sheet.add_loan_out_entry("IL356", "IT_Inventory", "Raspberry Pi Zero 2W #1", "9408")
     
