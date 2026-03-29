@@ -484,7 +484,7 @@ class EquipReturnScreen(ttk.Frame):
         btn_frame = ttk.Frame(self)
         btn_frame.pack(side="bottom", pady=40)
 
-        ttk.Button(btn_frame, text="Confirm Return", style="Accent.TButton",
+        ttk.Button(btn_frame, text="Confirm", style="Accent.TButton",
                    command=self.handle_save).pack(side="left", padx=20, ipadx=20, ipady=10)
 
         ttk.Button(btn_frame, text="Cancel",
