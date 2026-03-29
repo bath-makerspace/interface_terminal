@@ -54,14 +54,16 @@ class App(tk.Tk):
         self.focus_set()
 
     def get_loaned_items(self):
-        """Returns a set of items that are currently marked as 'LOANED'."""
+        """Returns items currently 'LOANED' based on the 6-column format."""
         loaned_items = set()
         if os.path.exists("loans.csv"):
             with open("loans.csv", "r") as f:
                 reader = csv.reader(f)
                 for row in reader:
-                    if len(row) >= 4:
-                        user, cat, item, status = row[0], row[1], row[2], row[3]
+                    # Indexing: 0:Time, 1:User, 2:Cat, 3:Item, 4:Status, 5:Auth
+                    if len(row) >= 5:
+                        item = row[3]
+                        status = row[4]
                         if status == "LOANED":
                             loaned_items.add(item)
                         elif status == "RETURNED":
@@ -69,15 +71,15 @@ class App(tk.Tk):
         return loaned_items
 
     def get_unpaid_debts(self):
-        """Returns a list of rows from entries.csv where the auth key is missing."""
+        """Returns rows from entries.csv where column 4 (Auth) is missing."""
         unpaid = []
         if os.path.exists("entries.csv"):
             with open("entries.csv", "r") as f:
                 reader = csv.reader(f)
                 for row in reader:
-                    # Check if the row has at least 3 columns and the 3rd is empty
-                    if len(row) >= 2:
-                        auth = row[2] if len(row) > 2 else ""
+                    # Indexing: 0:Time, 1:User, 2:Cost, 3:Auth
+                    if len(row) >= 3:
+                        auth = row[3] if len(row) > 3 else ""
                         if not auth.strip():
                             unpaid.append(row)
         return unpaid
@@ -535,67 +537,54 @@ class PaymentUpdateScreen(ttk.Frame):
 
         self.bind("<Button-1>", lambda e: self.master.close_keyboard())
 
-        # 1. TOP TITLE
         ttk.Label(self, text="Clear Outstanding Debt", font=("Arial", 20, "bold")).pack(pady=15)
 
-        # 2. MAIN CONTENT AREA
         content_container = ttk.Frame(self)
         content_container.pack(fill="both", expand=True, padx=40)
 
-        # --- LEFT COLUMN (Unpaid Debts List) ---
+        # --- LEFT COLUMN ---
         left_col = ttk.Frame(content_container)
         left_col.pack(side="left", fill="both", expand=True, padx=20)
 
-        ttk.Label(left_col, text="1. Select Unpaid Record", font=("Arial", 12, "bold")).pack(pady=5)
+        ttk.Label(left_col, text="Select Record", font=("Arial", 12, "bold")).pack(pady=5)
 
         list_container = ttk.Frame(left_col)
         list_container.pack(fill="both", expand=True, pady=10)
 
-        self.debt_listbox = tk.Listbox(
-            list_container,
-            font=("Arial", 16),
-            height=6,
-            exportselection=False,
-            selectbackground="#007fff"
-        )
+        self.debt_listbox = tk.Listbox(list_container, font=("Arial", 16), height=6, exportselection=False)
         self.debt_listbox.pack(side="left", fill="both", expand=True)
 
-        # Populate Listbox: "User - £Price"
         if not self.unpaid_list:
             self.debt_listbox.insert(tk.END, "  No unpaid debts found")
             self.debt_listbox.config(state="disabled")
         else:
             for row in self.unpaid_list:
-                user, price = row[0], row[1]
-                self.debt_listbox.insert(tk.END, f"  {user} - £{float(price):.2f}")
+                # Show Date, User, and Cost in the list
+                date_short = row[0][:10]  # Just the YYYY-MM-DD part
+                self.debt_listbox.insert(tk.END, f"  {date_short} | {row[1]} - £{float(row[2]):.2f}")
 
-        # Scrollbar
-        self.scrollbar = ttk.Scrollbar(list_container, orient="vertical", command=self.debt_listbox.yview)
-        self.scrollbar.pack(side="right", fill="y")
-        self.debt_listbox.config(yscrollcommand=self.scrollbar.set)
+        scrollbar = ttk.Scrollbar(list_container, orient="vertical", command=self.debt_listbox.yview)
+        scrollbar.pack(side="right", fill="y")
+        self.debt_listbox.config(yscrollcommand=scrollbar.set)
 
-        # --- RIGHT COLUMN (Update Auth) ---
+        # --- RIGHT COLUMN ---
         right_col = ttk.Frame(content_container)
         right_col.pack(side="left", fill="both", expand=True, padx=20)
 
-        ttk.Label(right_col, text="2. Committee Verification", font=("Arial", 12, "bold")).pack(pady=10)
+        ttk.Label(right_col, text="Verification", font=("Arial", 12, "bold")).pack(pady=10)
+        ttk.Label(right_col, text="4-Digit Auth Key", font=("Arial", 11)).pack(anchor="w")
 
-        ttk.Label(right_col, text="Enter 4-Digit Auth Key", font=("Arial", 11)).pack(anchor="w")
         self.auth_key = ttk.Entry(right_col, font=("Arial", 14))
         self.auth_key.pack(fill="x", pady=10)
         self.auth_key.bind("<Button-1>", lambda e: self.master.open_keyboard(mode="numeric"))
         self.auth_key.bind("<Return>", lambda e: self.master.close_keyboard())
 
-        ttk.Label(right_col, text="Confirming this will mark the\nselected debt as PAID.",
-                  font=("Arial", 10, "italic"), justify="center").pack(pady=20)
-
         # 3. BOTTOM BUTTONS
         btn_frame = ttk.Frame(self)
         btn_frame.pack(side="bottom", pady=40)
 
-        ttk.Button(btn_frame, text="Update Record", style="Accent.TButton",
+        ttk.Button(btn_frame, text="Mark as PAID", style="Accent.TButton",
                    command=self.handle_save).pack(side="left", padx=20, ipadx=20, ipady=10)
-
         ttk.Button(btn_frame, text="Cancel",
                    command=lambda: self.master.switch_frame(StartScreen)).pack(side="left", padx=20, ipadx=20, ipady=10)
 
@@ -603,41 +592,32 @@ class PaymentUpdateScreen(ttk.Frame):
         auth = self.auth_key.get().strip()
         selection = self.debt_listbox.curselection()
 
-        # Validate selection and 4-digit key
-        if not selection:
-            messagebox.showwarning("Incomplete", "Please select a record from the list.")
+        if not selection or not (len(auth) == 4 and auth.isdigit()):
+            messagebox.showwarning("Error", "Select a record and enter a 4-digit Auth Key.")
             return
 
-        if not (len(auth) == 4 and auth.isdigit()):
-            messagebox.showwarning("Invalid Auth", "A 4-digit Auth Key is required to clear debt.")
-            return
-
-        # Get the specific row data we are updating
         selected_row_data = self.unpaid_list[selection[0]]
-
-        # --- UPDATE CSV LOGIC ---
         all_rows = []
         updated = False
 
+        # Read and find the matching row using the unique timestamp + user + cost
         with open("entries.csv", "r") as f:
             reader = csv.reader(f)
             for row in reader:
-                # If this row matches the one we selected and hasn't been updated yet
                 if not updated and row == selected_row_data:
-                    # Update the auth key (3rd column)
-                    if len(row) < 3:
+                    # Column 0: Time, 1: User, 2: Cost, 3: Auth
+                    if len(row) < 4:
                         row.append(auth)
                     else:
-                        row[2] = auth
+                        row[3] = auth
                     updated = True
                 all_rows.append(row)
 
-        # Rewrite the file with the updated data
         with open("entries.csv", "w", newline="") as f:
             writer = csv.writer(f)
             writer.writerows(all_rows)
 
-        messagebox.showinfo("Success", "Debt record updated to PAID.")
+        messagebox.showinfo("Success", "Record updated.")
         self.master.switch_frame(StartScreen)
 
 if __name__ == "__main__":
