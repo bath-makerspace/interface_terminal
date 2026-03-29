@@ -14,7 +14,7 @@ class App(tk.Tk):
     # Apply the theme to the specific app instance
     sv_ttk.set_theme("light")
     # A massive font for primary actions
-    style.configure('Big.TButton', font=('Arial', 18, 'bold'))
+    style.configure('Big.TButton', font=('Arial', 18))
     # A medium font for secondary actions
     style.configure('Medium.TButton', font=('Arial', 12))
     def __init__(self):
@@ -243,7 +243,7 @@ class StartScreen(ttk.Frame):
 
             # Place the label
             self.bg_label = tk.Label(self, image=self.bg_image)
-            self.bg_label.place(relx=0.3, rely=0.5, anchor="center")
+            self.bg_label.place(relx=0.2, rely=0.5, anchor="center")
 
         except FileNotFoundError:
             print("Logo file not found.")
