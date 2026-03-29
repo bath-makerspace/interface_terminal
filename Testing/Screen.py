@@ -358,7 +358,39 @@ class EquipLoanScreen(ttk.Frame):
                                     width=4, fill="black", capstyle=tk.ROUND, smooth=True)
             self.draw.line([self.last_x, self.last_y, event.x, event.y], fill="black", width=4)
             self.signed = True
-        self.last_x, self.last_y =
+        self.last_x, self.last_y = event.x, event.y
+
+    def reset_coords(self, event):
+        self.last_x, self.last_y = None, None
+
+    def clear(self):
+        self.canvas.delete("all")
+        self.image = Image.new("RGB", (self.canvaswidth, self.canvasheight), "white")
+        self.draw = ImageDraw.Draw(self.image)
+        self.signed = False
+
+    def handle_save(self):
+        user = self.username.get().strip()
+
+        # Get selected item from listbox
+        selection = self.item_listbox.curselection()
+        item = self.item_listbox.get(selection[0]).strip() if selection else None
+
+        if not user:
+            messagebox.showwarning("Incomplete", "Please enter your username.")
+        elif not item:
+            messagebox.showwarning("Incomplete", "Please select an item from the list.")
+        elif not self.signed:
+            messagebox.showwarning("Incomplete", "Please sign to confirm.")
+        else:
+            if not os.path.exists("signatures"): os.makedirs("signatures")
+            self.image.save(f"signatures/loan_{user}.png")
+
+            with open("loans.csv", "a", newline="") as f:
+                csv.writer(f).writerow([user, self.current_category, item, "LOANED"])
+
+            messagebox.showinfo("Success", f"{item} loaned to {user}!")
+            self.master.switch_frame(StartScreen)
 
 if __name__ == "__main__":
     app = App()
