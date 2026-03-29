@@ -230,7 +230,7 @@ class StartScreen(ttk.Frame):
 
         # Inside StartScreen __init__
         try:
-            original_logo = Image.open("your_logo.png").convert("RGBA")
+            original_logo = Image.open("transparent_png_logo_final.png.png").convert("RGBA")
             logo_resized = original_logo.resize((800, 800), Image.Resampling.LANCZOS)
 
             # Adjust opacity
