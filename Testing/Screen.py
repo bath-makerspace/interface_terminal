@@ -244,7 +244,6 @@ class PaymentChoiceScreen(ttk.Frame):
 
 
 class EquipLoanScreen(ttk.Frame):
-    # Smaller canvas to fit the side-by-side layout
     canvaswidth = 350
     canvasheight = 200
 
@@ -252,15 +251,19 @@ class EquipLoanScreen(ttk.Frame):
         super().__init__(master)
         self.master = master
         self.signed = False
-        self.current_category = "None"
+        self.current_category = None
 
         # Equipment Data
         self.equipment_data = {
-            "Power Tools": ["Cordless Drill", "Jigsaw", "Orbital Sander", "Heat Gun"],
-            "Hand Tools": ["Screwdriver Set", "Socket Wrench Set", "Chisel Set", "Hand Saw"],
-            "Electronics": ["Multimeter", "Soldering Iron", "Oscilloscope", "Power Supply"],
-            "Miscellaneous": ["Safety Goggles", "Measuring Tape", "Spirit Level", "Clamps"]
+            "Power Tools": ["Cordless Drill", "Jigsaw", "Orbital Sander", "Heat Gun", "Router", "Circular Saw",
+                            "Dremel"],
+            "Hand Tools": ["Screwdriver Set", "Socket Wrench", "Chisel Set", "Hand Saw", "Rubber Mallet", "Level"],
+            "Electronics": ["Multimeter", "Soldering Iron", "Oscilloscope", "Power Supply", "Logic Analyzer"],
+            "Miscellaneous": ["Safety Goggles", "Measuring Tape", "Spirit Level", "Clamps", "Work Light"]
         }
+
+        # Background tap closes keyboard
+        self.bind("<Button-1>", lambda e: self.master.close_keyboard())
 
         # 1. TOP TITLE
         ttk.Label(self, text="Equipment Loan Portal", font=("Arial", 24, "bold")).pack(pady=20)
@@ -278,19 +281,36 @@ class EquipLoanScreen(ttk.Frame):
         # Grid for the 4 Category Buttons
         grid_frame = ttk.Frame(left_col)
         grid_frame.pack()
-
-        categories = list(self.equipment_data.keys())
-        for i, cat in enumerate(categories):
+        for i, cat in enumerate(self.equipment_data.keys()):
             btn = ttk.Button(grid_frame, text=cat, width=15,
                              command=lambda c=cat: self.update_category(c))
-            btn.grid(row=i // 2, column=i % 2, padx=5, pady=5, ipadx=5, ipady=5)
+            btn.grid(row=i // 2, column=i % 2, padx=5, pady=5, ipadx=5, ipady=10)
 
-        ttk.Label(left_col, text="2. Choose Item", font=("Arial", 14, "bold")).pack(pady=(20, 5))
+        ttk.Label(left_col, text="2. Tap to Select Item", font=("Arial", 14, "bold")).pack(pady=(20, 5))
 
-        # The Dropdown (Combobox)
-        self.item_selector = ttk.Combobox(left_col, font=("Arial", 14), state="readonly")
-        self.item_selector.pack(fill="x", pady=10)
-        self.item_selector.set("Select a category first")
+        # --- TOUCH-FRIENDLY LISTBOX AREA ---
+        list_container = ttk.Frame(left_col)
+        list_container.pack(fill="both", expand=True, pady=10)
+
+        # Increase Listbox font and height for fingers
+        self.item_listbox = tk.Listbox(
+            list_container,
+            font=("Arial", 16),
+            height=6,
+            activestyle='none',
+            exportselection=False,
+            selectbackground="#007fff"  # Highlight color
+        )
+        self.item_listbox.pack(side="left", fill="both", expand=True)
+
+        # Custom thick scrollbar
+        scrollbar_style = ttk.Style()
+        scrollbar_style.configure("Vertical.TScrollbar", arrowsize=30)  # Bigger arrows
+
+        self.scrollbar = ttk.Scrollbar(list_container, orient="vertical", command=self.item_listbox.yview,
+                                       style="Vertical.TScrollbar")
+        self.scrollbar.pack(side="right", fill="y")
+        self.item_listbox.config(yscrollcommand=self.scrollbar.set)
 
         # --- RIGHT COLUMN (Identity Area) ---
         right_col = ttk.Frame(content_container)
@@ -300,17 +320,16 @@ class EquipLoanScreen(ttk.Frame):
         self.username = ttk.Entry(right_col, font=("Arial", 14))
         self.username.pack(fill="x", pady=(0, 15))
         self.username.bind("<Button-1>", lambda e: self.master.open_keyboard(mode="full"))
+        self.username.bind("<Return>", lambda e: self.master.close_keyboard())
 
-        ttk.Label(right_col, text="Please Sign Below", font=("Arial", 12)).pack()
+        ttk.Label(right_col, text="Signature", font=("Arial", 12)).pack(anchor="w")
         self.canvas = tk.Canvas(right_col, bg="white", width=self.canvaswidth, height=self.canvasheight,
                                 relief="ridge", bd=2, highlightthickness=0)
         self.canvas.pack(pady=10)
 
-        # PIL Image setup
         self.image = Image.new("RGB", (self.canvaswidth, self.canvasheight), "white")
         self.draw = ImageDraw.Draw(self.image)
         self.last_x, self.last_y = None, None
-
         self.canvas.bind("<B1-Motion>", self.paint)
         self.canvas.bind("<ButtonRelease-1>", self.reset_coords)
 
@@ -321,17 +340,17 @@ class EquipLoanScreen(ttk.Frame):
         btn_frame.pack(side="bottom", pady=30)
 
         ttk.Button(btn_frame, text="Confirm Loan", style="Accent.TButton",
-                   command=self.handle_save).pack(side="left", padx=20, ipadx=20, ipady=10)
+                   command=self.handle_save).pack(side="left", padx=20, ipadx=30, ipady=15)
 
         ttk.Button(btn_frame, text="Cancel",
-                   command=lambda: self.master.switch_frame(StartScreen)).pack(side="left", padx=20, ipadx=20, ipady=10)
+                   command=lambda: self.master.switch_frame(StartScreen)).pack(side="left", padx=20, ipadx=30, ipady=15)
 
     def update_category(self, category):
-        """Updates the dropdown values based on button clicked."""
         self.current_category = category
-        self.item_selector.config(values=self.equipment_data[category])
-        self.item_selector.set(f"-- Select {category} --")
-        self.master.close_keyboard()  # Ensure keyboard doesn't block dropdown
+        self.item_listbox.delete(0, tk.END)
+        for item in self.equipment_data[category]:
+            self.item_listbox.insert(tk.END, f"  {item}")  # Add padding for finger space
+        self.master.close_keyboard()
 
     def paint(self, event):
         if self.last_x and self.last_y:
@@ -339,39 +358,7 @@ class EquipLoanScreen(ttk.Frame):
                                     width=4, fill="black", capstyle=tk.ROUND, smooth=True)
             self.draw.line([self.last_x, self.last_y, event.x, event.y], fill="black", width=4)
             self.signed = True
-        self.last_x, self.last_y = event.x, event.y
-
-    def reset_coords(self, event):
-        self.last_x, self.last_y = None, None
-
-    def clear(self):
-        self.canvas.delete("all")
-        self.image = Image.new("RGB", (self.canvaswidth, self.canvasheight), "white")
-        self.draw = ImageDraw.Draw(self.image)
-        self.signed = False
-
-    def handle_save(self):
-        user = self.username.get().strip()
-        item = self.item_selector.get()
-
-        # Validation
-        if not user:
-            messagebox.showwarning("Missing Info", "Please enter your username.")
-        elif self.current_category == "None" or "-- Select" in item:
-            messagebox.showwarning("Missing Info", "Please select an item to loan.")
-        elif not self.signed:
-            messagebox.showwarning("Missing Info", "Please provide a signature.")
-        else:
-            # Save signature
-            if not os.path.exists("signatures"): os.makedirs("signatures")
-            self.image.save(f"signatures/loan_{user}.png")
-
-            # Log to CSV
-            with open("loans.csv", "a", newline="") as f:
-                csv.writer(f).writerow([user, self.current_category, item, "LOANED"])
-
-            messagebox.showinfo("Success", f"{item} has been logged to your account.")
-            self.master.switch_frame(StartScreen)
+        self.last_x, self.last_y =
 
 if __name__ == "__main__":
     app = App()
