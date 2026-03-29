@@ -250,11 +250,11 @@ class StartScreen(ttk.Frame):
                           font=("Arial", 32, "bold"))
         label.pack(pady=(80, 40))  # More top padding to move text off the logo center
 
-        btn1 = ttk.Button(self, text="3D Printing Service", font=("Arial", 24),
+        btn1 = ttk.Button(self, text="3D Printing Service", font=("Arial", 24, "bold"),
                           command=lambda: master.switch_frame(PaymentChoiceScreen))
         btn1.pack(ipadx=40, ipady=30, pady=10)
 
-        btn2 = ttk.Button(self, text="Equipment Service", font=("Arial", 24),
+        btn2 = ttk.Button(self, text="Equipment Service", font=("Arial", 24, "bold"),
                           command=lambda: master.switch_frame(EquipChoiceScreen))
         btn2.pack(ipadx=40, ipady=30, pady=10)
 
