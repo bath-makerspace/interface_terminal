@@ -166,7 +166,7 @@ class PaymentInputScreen(ttk.Frame):
         user = self.username.get()
         price = self.update_price()
         auth = self.auth_key.get()
-        issigned = self.signed.get()
+        issigned = self.signed
         if user and price and issigned== 1:
             # Save the signature named by the user to avoid overwriting
             self.image.save(f"signatures/{user}_sig.png")
