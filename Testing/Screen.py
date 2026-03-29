@@ -30,33 +30,35 @@ class App(tk.Tk):
         self.current_frame.pack(fill="both", expand=True)
 
     def open_keyboard(self, event=None, mode="full"):
-        """Launches wvkbd (Wayland-native keyboard)."""
-        try:
-            # Kill any existing keyboard first to avoid multiple instances
+        """Launches wvkbd with correct flags for your version."""
+        if platform.system() == "Linux":
+            env = os.environ.copy()
+            # Clean up any old instance first
             self.close_keyboard()
 
-            if mode == "numeric":
-                # Opens a dedicated number pad - perfect for 'Print Mass'
-                self.kb_process = subprocess.Popen(["wvkbd-mobintl", "--landscape", "special"])
-            else:
-                # Opens the full standard keyboard
-                self.kb_process = subprocess.Popen(["wvkbd-mobintl", "--landscape"])
-
-        except FileNotFoundError:
-            print("wvkbd not found. Falling back to onboard...")
             try:
-                self.kb_process = subprocess.Popen(["onboard"])
-            except:
-                print("No virtual keyboard found.")
+                if mode == "numeric":
+                    # Use '-l dialer' or '-l numeric' for the number pad
+                    # Adjust -L (height) to 250 pixels so it fits your 600px screen nicely
+                    args = ["wvkbd-mobintl", "-L", "250", "-l", "dialer"]
+                else:
+                    # Standard alphabetical layout
+                    args = ["wvkbd-mobintl", "-L", "250"]
+
+                self.kb_process = subprocess.Popen(args, env=env)
+            except FileNotFoundError:
+                print("wvkbd not found. Please run: sudo apt install wvkbd")
+        else:
+            print(f"Windows: Keyboard trigger captured for {mode} mode.")
 
     def close_keyboard(self):
-        """Kills wvkbd or onboard."""
-        # We use pkill here because wvkbd sometimes detaches from the subprocess
-        subprocess.run(["pkill", "wvkbd-mobintl"], stderr=subprocess.DEVNULL)
-        subprocess.run(["pkill", "onboard"], stderr=subprocess.DEVNULL)
-        if self.kb_process:
-            self.kb_process.terminate()
-            self.kb_process = None
+        """Kills the keyboard process on Linux."""
+        if platform.system() == "Linux":
+            # pkill is the most reliable way to hide Wayland keyboards
+            subprocess.run(["pkill", "wvkbd-mobintl"], stderr=subprocess.DEVNULL)
+            if self.kb_process:
+                self.kb_process.terminate()
+                self.kb_process = None
 
 class StartScreen(ttk.Frame):
     def __init__(self, master):
