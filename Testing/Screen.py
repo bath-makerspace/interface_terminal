@@ -246,16 +246,17 @@ class StartScreen(ttk.Frame):
         super().__init__(master)
         self.master = master
 
-        # Just reference the image we already loaded in App
-        if self.master.logo_image:
-            self.bg_label = tk.Label(self, image=self.master.logo_image
+        class StartScreen(ttk.Frame):
+            def __init__(self, master):
+                super().__init__(master)
+                self.master = master
 
-            # Place the label
-            self.bg_label = tk.Label(self, image=self.bg_image)
-            self.bg_label.place(relx=0.2, rely=0.5, anchor="center")
+                # Just reference the image we already loaded in App
+                if self.master.logo_image:
+                    self.bg_label = tk.Label(self, image=self.master.logo_image)
+                    self.bg_label.place(relx=0.5, rely=0.5, anchor="center")
 
-        except FileNotFoundError:
-            print("Logo file not found.")
+                # ... rest of your buttons ...
 
         # --- EXISTING BUTTONS ---
         # The buttons will naturally sit on top of the placed image
