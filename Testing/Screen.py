@@ -256,11 +256,11 @@ class StartScreen(ttk.Frame):
 
         btn1 = ttk.Button(self, text="3D Printing Service", style="Big.TButton",
                           command=lambda: master.switch_frame(PaymentChoiceScreen))
-        btn1.pack(ipadx=40, ipady=30, pady=10)
+        btn1.pack(ipadx=60, ipady=45, pady=15)
 
         btn2 = ttk.Button(self, text="Equipment Service", style="Big.TButton",
                           command=lambda: master.switch_frame(EquipChoiceScreen))
-        btn2.pack(ipadx=40, ipady=30, pady=10)
+        btn2.pack(ipadx=60, ipady=45, pady=15)
 
 class EquipChoiceScreen(ttk.Frame):
     def __init__(self, master):
