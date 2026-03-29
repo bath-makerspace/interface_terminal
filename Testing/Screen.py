@@ -8,7 +8,6 @@ import subprocess
 from Bath_Cost_Code import Calculate_Personal_Cost
 from tkinter import messagebox
 from datetime import datetime
-style = ttk.Style()
 
 class App(tk.Tk):
     def __init__(self):
@@ -251,12 +250,11 @@ class StartScreen(ttk.Frame):
                           font=("Arial", 32, "bold"))
         label.pack(pady=(80, 40))  # More top padding to move text off the logo center
 
-        style.configure('Big.TButton', font=('Arial', 18, 'bold'))
-        btn1 = ttk.Button(self, text="3D Printing Service", style="Big.TButton",
+        btn1 = ttk.Button(self, text="3D Printing Service",
                           command=lambda: master.switch_frame(PaymentChoiceScreen))
         btn1.pack(ipadx=40, ipady=30, pady=10)
 
-        btn2 = ttk.Button(self, text="Equipment Service", style="Big.TButton",
+        btn2 = ttk.Button(self, text="Equipment Service",
                           command=lambda: master.switch_frame(EquipChoiceScreen))
         btn2.pack(ipadx=40, ipady=30, pady=10)
 
