@@ -9,7 +9,7 @@ from Bath_Cost_Code import Calculate_Personal_Cost
 from tkinter import messagebox
 from datetime import datetime
 
-class App(tk.Tk):
+class App(ttk.Frame):
     def __init__(self):
         super().__init__()
         self.title("Makerspace Information Terminal")
