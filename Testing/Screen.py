@@ -224,32 +224,29 @@ class PaymentInputScreen(ttk.Frame):
 
 class StartScreen(ttk.Frame):
     def __init__(self, master):
+
         super().__init__(master)
         self.master = master
 
-        # --- BACKGROUND LOGO LOGIC ---
+        # Inside StartScreen __init__
         try:
-            # 1. Load the original image
-            original_logo = Image.open("transparent_png_logo_final.png").convert("RGBA")
-
-            # 2. Resize it (e.g., to 400x400 or whatever fits your 1024x600 screen)
+            original_logo = Image.open("your_logo.png").convert("RGBA")
             logo_resized = original_logo.resize((800, 800), Image.Resampling.LANCZOS)
 
-            # 3. Adjust Opacity (0.1 is 10% opacity, 0.2 is 20%, etc.)
+            # Adjust opacity
             alpha = logo_resized.split()[3]
-            alpha = ImageEnhance.Brightness(alpha).enhance(0.2)
+            alpha = ImageEnhance.Brightness(alpha).enhance(0.1)
             logo_resized.putalpha(alpha)
 
-            # 4. Convert to a format Tkinter understands
-            self.bg_image = ImageTk.PhotoImage(logo_resized)
+            # --- THE FIX IS HERE: Add 'master=self.master' ---
+            self.bg_image = ImageTk.PhotoImage(logo_resized, master=self.master)
 
-            # 5. Create a label to hold the image and place it in the center
-            # We use a standard tk.Label here so we can set a transparent background
+            # Place the label
             self.bg_label = tk.Label(self, image=self.bg_image)
             self.bg_label.place(relx=0.3, rely=0.5, anchor="center")
 
         except FileNotFoundError:
-            print("Logo file not found, skipping background image.")
+            print("Logo file not found.")
 
         # --- EXISTING BUTTONS ---
         # The buttons will naturally sit on top of the placed image
