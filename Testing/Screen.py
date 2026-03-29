@@ -72,7 +72,7 @@ class PaymentInputScreen(ttk.Frame):
         self.username.bind("<Return>", lambda e: self.master.close_keyboard())
 
         # Mass
-        ttk.Label(self, text="Print Mass (g)", font=("Arial", 12)).pack()
+        ttk.Label(self, text="Print Mass (nearest gram)", font=("Arial", 12)).pack()
         self.print_mass = ttk.Entry(self, font=("Arial", 14), width=15)
         self.print_mass.pack(pady=10)
         self.print_mass.bind("<Button-1>", lambda e: self.master.open_keyboard(mode="numeric"))
