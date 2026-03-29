@@ -474,7 +474,6 @@ class EquipReturnScreen(ttk.Frame):
         self.username.bind("<Return>", lambda e: self.master.close_keyboard())
 
         ttk.Label(right_col, text="Auth Key (Committee Only)", font=("Arial", 11)).pack(anchor="w")
-        ttk.Label(right_col, text="(Leave blank if not paying debt now)", font=("Arial", 9, "italic")).pack(anchor="w")
         self.auth_key = ttk.Entry(right_col, font=("Arial", 14))
         self.auth_key.pack(fill="x", pady=(0, 10))
         self.auth_key.bind("<Button-1>", lambda e: self.master.open_keyboard(mode="numeric"))
