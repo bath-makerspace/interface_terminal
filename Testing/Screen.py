@@ -6,6 +6,7 @@ import sv_ttk
 import os
 import subprocess
 from Bath_Cost_Code import Calculate_Personal_Cost
+from tkinter import messagebox
 
 
 class App(tk.Tk):
@@ -51,22 +52,6 @@ class App(tk.Tk):
 
         # This removes the blinking cursor from any text box
         self.focus_set()
-        self.update_price()
-
-    def update_price(self):
-        raw_val = self.print_mass.get()
-        if raw_val:
-            try:
-                price = Calculate_Personal_Cost(raw_val)
-                self.cost_display.config(text=f"Cost: £{float(price):.2f}")
-                return price
-            except ValueError:
-                self.cost_display.config(text="Invalid Mass!")
-        return 0
-
-
-from tkinter import messagebox  # Add this to your imports at the top
-
 
 class PaymentInputScreen(ttk.Frame):
     canvaswidth = 400
