@@ -202,7 +202,7 @@ class StartScreen(ttk.Frame):
     def __init__(self, master):
         super().__init__(master)
 
-        label = ttk.Label(self, text="Welcome to the Makerspace Portal,", font=("Arial", 24))
+        label = ttk.Label(self, text="Welcome to the Makerspace Portal", font=("Arial", 24))
         label.pack(pady=100)
 
         # Using style="Accent.TButton" (provided by sv_ttk) for the primary action
