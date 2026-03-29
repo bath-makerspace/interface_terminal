@@ -136,7 +136,7 @@ class PaymentInputScreen(ttk.Frame):
                                     width=4, fill="black", capstyle=tk.ROUND, smooth=True)
             self.draw.line([self.last_x, self.last_y, event.x, event.y], fill="black", width=4)
         self.last_x, self.last_y = event.x, event.y
-        if signed == 0:
+        if self.signed == 0:
             signed = 1
 
     def reset_coords(self, event):
@@ -166,7 +166,7 @@ class PaymentInputScreen(ttk.Frame):
         user = self.username.get()
         price = self.update_price()
         auth = self.auth_key.get()
-        if user and price and signed == 1:
+        if user and price and self.signed == 1:
             # Save the signature named by the user to avoid overwriting
             self.image.save(f"signatures/{user}_sig.png")
 
