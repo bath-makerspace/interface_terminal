@@ -93,7 +93,7 @@ class sheet_API:
 
     def add_loan_out_entry(self, Bath_ID, Item_Category, Item, AuthCode):
         on_loan_table_details = self.convert_LUT('Loan_Out')
-        pending_table_details = self.convert_LUT('Pending')
+        pending_table_details = self.convert_LUT('Pending_Loan')
         inventory_table_details = self.convert_LUT(Item_Category)
 
         on_loan_sheet = self.client.open(on_loan_table_details["spreadsheet_name"]).worksheet(on_loan_table_details["sheet_name"])
@@ -109,7 +109,7 @@ class sheet_API:
         pending_col = pending_table_details["col"].split(":")
         pending_start_col = pending_col[0]
         pending_end_col = pending_col[1]
-        pending_row_values = len(pending_sheet.col_values(1))
+        pending_row_values = len(pending_sheet.col_values(self.__col_to_num(pending_start_col)))
 
         inventory_col = inventory_table_details["col"].split(":")
         inventory_start_col = inventory_col[0]
@@ -178,9 +178,46 @@ class sheet_API:
             printing_credit_sheet.update(range_name=printing_credit_target_range, values=[[AuthCode]],value_input_option='USER_ENTERED')
             print(f"Successfully completed pending payment for {Bath_ID} in {printing_credit_details['sheet_name']} at {printing_credit_target_range}")
 
-    def add_loan_in_entry(self, Bath_ID, Item, AuthCode):
-        pending
-        pass
+    def add_loan_in_entry(self, Bath_ID, Item_Category, Item, AuthCode):
+        on_loan_in_table = self.convert_LUT('Loan_In')
+        pending_table_details = self.convert_LUT('Pending_Loan')
+        inventory_table_details = self.convert_LUT(Item_Category)
+
+        on_loan_in_sheet = self.client.open(on_loan_in_table["spreadsheet_name"]).worksheet(on_loan_in_table["sheet_name"])
+        pending_sheet = self.client.open(pending_table_details["spreadsheet_name"]).worksheet(pending_table_details["sheet_name"])
+        inventory_sheet = self.client.open(inventory_table_details["spreadsheet_name"]).worksheet(inventory_table_details["sheet_name"])
+
+        pending_load_table = self.__get_table_column_val(pending_table_details["spreadsheet_name"], pending_table_details["sheet_name"], pending_table_details["col"])
+        rows_to_update = []
+        for index, item in enumerate(pending_load_table):
+            if item["Bath_ID"] == Bath_ID and item["Item"] == Item:
+                pending_row = index + 2 # +1, for header, +1 because index starts at 0
+                rows_to_update = int(item["Row_In_On_Loan"])
+                pending_target_range = f"{pending_table_details['col'].split(':')[0]}{pending_row}:{pending_table_details['col'].split(':')[1]}{pending_row}"
+                pending_sheet.update(range_name=pending_target_range, values=[["", "", "", "", ""]],value_input_option='USER_ENTERED')
+                print(f"Successfully completed pending loan for {Bath_ID} in {pending_table_details['sheet_name']} at {pending_target_range}")
+                break
+        
+        AuthCode = "'" + AuthCode # Ensure AuthCode is treated as text in Google Sheets
+
+        Loan_in_AUTHORISER_FORMULA = f"=VLOOKUP({on_loan_in_table['col'].split(':')[1]}{rows_to_update},'Committee/Volunteer'!D:F,2,FALSE)"
+
+        # add AuthCode to On Loan Sheet
+        on_loan_in_target_range = f"{on_loan_in_table['col'].split(':')[0]}{rows_to_update}:{on_loan_in_table['col'].split(':')[1]}{rows_to_update}"
+        on_loan_in_sheet.update(range_name=on_loan_in_target_range, values=[[Loan_in_AUTHORISER_FORMULA,AuthCode]],value_input_option='USER_ENTERED')
+        print(f"Successfully completed pending loan for {Bath_ID} in {on_loan_in_table['sheet_name']} at {on_loan_in_target_range}")
+        
+        # Update Inventory Sheet to be Available
+        inventory_table = self.__get_table_column_val(inventory_table_details["spreadsheet_name"], inventory_table_details["sheet_name"], inventory_table_details["col"])
+        for index, item in enumerate(inventory_table):
+            if item["Item Name"] == Item:
+                inventory_row = index + 2 # +1, for header, +1 because index starts at 0
+                Inventory_AUTHORISER_FORMULA = f"=VLOOKUP({inventory_table_details['col'].split(':')[1]}{inventory_row},'Committee/Volunteer'!D:F,2,FALSE)"
+                inventory_target_range = f"{inventory_table_details['col'].split(':')[0]}{inventory_row}:{inventory_table_details['col'].split(':')[1]}{inventory_row}"
+                new_inventory_data = [Item, item["Item Type"], "Makerspace (Lab)", Inventory_AUTHORISER_FORMULA, AuthCode]
+                inventory_sheet.update(range_name=inventory_target_range, values=[new_inventory_data],value_input_option='USER_ENTERED')
+                print(f"Successfully updated {Item} status to Available in {inventory_table_details['sheet_name']} at {inventory_target_range}")
+                break
 
 
     def get_possible_auth_code(self) -> list:   
@@ -235,10 +272,12 @@ class sheet_API:
 if __name__ == "__main__":
     sheet = sheet_API()
 
-    sheet.add_personal_print_credit("IL356", 11)
-    sheet.add_personal_print_credit("IL356", 40, "9408")
+    # sheet.add_personal_print_credit("HH940", 11)
+    # sheet.add_personal_print_credit("IL356", 11)
+    # sheet.add_personal_print_credit("IL356", 40, "9408")
     sheet.add_loan_out_entry("IL356", "IT_Inventory", "Raspberry Pi Zero 2W #1", "9408")
-    print(sheet.get_pending_payments())
-    sheet.complete_pending_payment("IL356", "9408")
+    sheet.add_loan_in_entry("IL356", "IT_Inventory", "Raspberry Pi Zero 2W #1", "9408")
+    # print(sheet.get_pending_payments())
+    # sheet.complete_pending_payment("HH940", "9408")
     # sheet.add_loan_out_entry("IL356", "IT_Inventory", "Raspberry Pi Zero 2W #1", "9408")
     

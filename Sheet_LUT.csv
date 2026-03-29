@@ -11,9 +11,9 @@ Laser_Printer_Equip, Inventory,Equipment Inventory,V:AA
 
 Auth_Code,Committee Info,Committee/Volunteer,D:D
 
-Pending,GUI_Credit Tracker,Pending,A:E
 Credit_Tracker,GUI_Credit Tracker,Printing Credit,A:F
 Credit_AuthCode,GUI_Credit Tracker,Printing Credit,F:F
 Loan_Out,GUI_Credit Tracker,On Loan,A:F
-Pending_Loan,GUI_Credit Tracker,Pending,A:D
+Loan_In,GUI_Credit Tracker,On Loan,G:H
+Pending_Loan,GUI_Credit Tracker,Pending,A:E
 Pending_Payment,GUI_Credit Tracker,Pending,G:J
