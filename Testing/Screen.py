@@ -19,20 +19,19 @@ class App(tk.Tk):
         self.switch_frame(StartScreen)
 
     def switch_frame(self, frame_class):
-        """Switches screens and ensures the keyboard is closed."""
         self.close_keyboard()
-        new_frame = frame_class(self)
         if self.current_frame is not None:
             self.current_frame.destroy()
-        self.current_frame = new_frame
+        self.current_frame = frame_class(self)
         self.current_frame.pack(fill="both", expand=True)
 
+        # Bind clicking on the background of the NEW frame to close the keyboard
+        self.current_frame.bind("<Button-1>", lambda e: self.close_keyboard())
+
     def open_keyboard(self, mode="full"):
-        """Launches the Wayland-native keyboard (wvkbd)."""
-        self.close_keyboard()  # Prevent stacking multiple keyboards
+        self.close_keyboard()
         env = os.environ.copy()
 
-        # -L 250 sets the landscape height to 250px (leaving room for your app)
         if mode == "numeric":
             args = ["wvkbd-mobintl", "-L", "250", "-l", "dialer"]
         else:
@@ -41,35 +40,151 @@ class App(tk.Tk):
         try:
             self.kb_process = subprocess.Popen(args, env=env)
         except FileNotFoundError:
-            print("Keyboard not found. Run: sudo apt install wvkbd")
+            print("Keyboard not found.")
 
-    def close_keyboard(self):
-        """Forcefully closes any open wvkbd instances."""
+    def close_keyboard(self, event=None):
+        """Kills keyboard and removes focus from widgets."""
         subprocess.run(["pkill", "wvkbd-mobintl"], stderr=subprocess.DEVNULL)
         if self.kb_process:
             self.kb_process.terminate()
             self.kb_process = None
 
-class StartScreen(ttk.Frame):
+        # This removes the blinking cursor from any text box
+        self.focus_set()
+
+
+from tkinter import messagebox  # Add this to your imports at the top
+
+
+class PaymentInputScreen(ttk.Frame):
+    canvaswidth = 400
+    canvasheight = 250
+
     def __init__(self, master):
         super().__init__(master)
+        self.master = master
+        self.signed = False  # Track if the user has signed
 
-        label = ttk.Label(self, text="Welcome To The Makerspace Debt Portal", font=("Arial", 24))
-        label.pack(pady=100)
+        # Ensure the signatures folder exists so we don't crash on save
+        if not os.path.exists("signatures"):
+            os.makedirs("signatures")
 
-        # Using style="Accent.TButton" (provided by sv_ttk) for the primary action
-        # btn1 = ttk.Button(self, text="Test Signature Pad",
-        #                  style="Accent.TButton",
-        #                  command=lambda: master.switch_frame(SignatureScreen))
-        # btn1.pack(ipadx=20, ipady=10, pady=10)
+        self.bind("<Button-1>", lambda e: self.master.close_keyboard())
 
-        btn2 = ttk.Button(self, text="Log 3D Print Debt",
-                         command=lambda: master.switch_frame(PaymentInputScreen))
-        btn2.pack(ipadx=20, ipady=10, pady=10)
+        # 1. TOP TITLE
+        ttk.Label(self, text="Log 3D Print Debt", font=("Arial", 24, "bold")).pack(pady=20)
 
-        btn2 = ttk.Button(self, text="Equipment",
-                         command=lambda: master.switch_frame(EquipChoiceScreen))
-        btn2.pack(ipadx=20, ipady=10, pady=10)
+        # 2. MAIN CONTENT AREA
+        content_container = ttk.Frame(self)
+        content_container.pack(fill="both", expand=True, padx=50)
+
+        # --- LEFT COLUMN (Inputs) ---
+        left_col = ttk.Frame(content_container)
+        left_col.pack(side="left", fill="both", expand=True, padx=20)
+
+        ttk.Label(left_col, text="Username", font=("Arial", 12)).pack(anchor="w")
+        self.username = ttk.Entry(left_col, font=("Arial", 14))
+        self.username.pack(fill="x", pady=(0, 15))
+        self.username.bind("<Button-1>", lambda e: self.master.open_keyboard(mode="full"))
+
+        ttk.Label(left_col, text="Print Mass (nearest gram)", font=("Arial", 12)).pack(anchor="w")
+        self.print_mass = ttk.Entry(left_col, font=("Arial", 14))
+        self.print_mass.pack(fill="x", pady=(0, 15))
+        self.print_mass.bind("<Button-1>", lambda e: self.master.open_keyboard(mode="numeric"))
+        self.print_mass.bind("<Return>", self.handle_enter_key)
+
+        ttk.Label(left_col, text="Authentication Key", font=("Arial", 12)).pack(anchor="w")
+        ttk.Label(left_col, text="(Only fill if paying now - 4 digits)", font=("Arial", 10, "italic")).pack(anchor="w")
+        self.auth_key = ttk.Entry(left_col, font=("Arial", 14))
+        self.auth_key.pack(fill="x", pady=(0, 10))
+        self.auth_key.bind("<Button-1>", lambda e: self.master.open_keyboard(mode="numeric"))
+
+        self.cost_display = ttk.Label(left_col, text="Cost: £0.00", font=("Arial", 18, "bold"))
+        self.cost_display.pack(pady=10)
+
+        # --- RIGHT COLUMN (Signature) ---
+        right_col = ttk.Frame(content_container)
+        right_col.pack(side="left", fill="both", expand=True, padx=20)
+
+        ttk.Label(right_col, text="Please Sign Below", font=("Arial", 12)).pack()
+        self.canvas = tk.Canvas(right_col, bg="white", width=self.canvaswidth, height=self.canvasheight,
+                                relief="ridge", bd=2, highlightthickness=0)
+        self.canvas.pack(pady=10)
+
+        self.image = Image.new("RGB", (self.canvaswidth, self.canvasheight), "white")
+        self.draw = ImageDraw.Draw(self.image)
+        self.last_x, self.last_y = None, None
+
+        self.canvas.bind("<B1-Motion>", self.paint)
+        self.canvas.bind("<ButtonRelease-1>", self.reset_coords)
+        ttk.Button(right_col, text="Clear Signature", command=self.clear).pack()
+
+        # 3. BOTTOM BUTTON BAR
+        btn_frame = ttk.Frame(self)
+        btn_frame.pack(side="bottom", pady=40)
+
+        ttk.Button(btn_frame, text="Save & Exit", style="Accent.TButton",
+                   command=self.handle_save).pack(side="left", padx=20, ipadx=20, ipady=10)
+
+        ttk.Button(btn_frame, text="Cancel",
+                   command=lambda: self.master.switch_frame(StartScreen)).pack(side="left", padx=20, ipadx=20, ipady=10)
+
+    def paint(self, event):
+        if self.last_x and self.last_y:
+            self.canvas.create_line(self.last_x, self.last_y, event.x, event.y,
+                                    width=4, fill="black", capstyle=tk.ROUND, smooth=True)
+            self.draw.line([self.last_x, self.last_y, event.x, event.y], fill="black", width=4)
+            self.signed = True  # User has started drawing
+        self.last_x, self.last_y = event.x, event.y
+
+    def reset_coords(self, event):
+        self.last_x, self.last_y = None, None
+
+    def clear(self):
+        self.canvas.delete("all")
+        self.image = Image.new("RGB", (self.canvaswidth, self.canvasheight), "white")
+        self.draw = ImageDraw.Draw(self.image)
+        self.signed = False  # Reset signature status
+
+    def handle_enter_key(self, event):
+        self.update_price()
+        self.master.close_keyboard()
+
+    def update_price(self):
+        raw_val = self.print_mass.get()
+        if raw_val:
+            try:
+                price = Calculate_Personal_Cost(raw_val)
+                self.cost_display.config(text=f"Cost: £{float(price):.2f}")
+                return price
+            except ValueError:
+                self.cost_display.config(text="Invalid Mass!")
+        return 0
+
+    def handle_save(self):
+        user = self.username.get().strip()
+        price = self.update_price()
+        auth = self.auth_key.get().strip()
+
+        # Validation Logic
+        auth_valid = (auth == "" or (len(auth) == 4 and auth.isdigit()))
+
+        if not user:
+            messagebox.showwarning("Incomplete", "Please enter a Username.")
+        elif price <= 0:
+            messagebox.showwarning("Incomplete", "Please enter a valid Print Mass.")
+        elif not self.signed:
+            messagebox.showwarning("Incomplete", "Please provide a signature.")
+        elif not auth_valid:
+            messagebox.showwarning("Invalid Auth", "Auth Key must be empty or a 4-digit number.")
+        else:
+            # All checks pass - Save data
+            self.image.save(f"signatures/{user}_sig.png")
+            with open("entries.csv", "a", newline="") as f:
+                csv.writer(f).writerow([user, price, auth])
+
+            messagebox.showinfo("Success", "Debt logged successfully!")
+            self.master.switch_frame(StartScreen)
 
 class EquipChoiceScreen(ttk.Frame):
     def __init__(self, master):
@@ -90,116 +205,24 @@ class EquipChoiceScreen(ttk.Frame):
                          command=lambda: master.switch_frame(StartScreen))
         btn3.pack(ipadx=20, ipady=10, pady=10)
 
-class PaymentInputScreen(ttk.Frame):
+class PaymentChoiceScreen(ttk.Frame):
     def __init__(self, master):
         super().__init__(master)
-        self.master = master
 
-        ttk.Label(self, text="Add to Tab", font=("Arial", 18, "bold")).pack(pady=20)
+        label = ttk.Label(self, text="", font=("Arial", 24))
+        label.pack(pady=100)
 
-        # Username Field
-        ttk.Label(self, text="Username", font=("Arial", 12)).pack()
-        self.username = ttk.Entry(self, font=("Arial", 14), width=25)
-        self.username.pack(pady=10)
-        self.username.bind("<Button-1>", lambda e: self.master.open_keyboard(mode="full"))
+        btn1 = ttk.Button(self, text="Log New Print Debt",
+                         command=lambda: master.switch_frame(PaymentInputScreen))
+        btn1.pack(ipadx=20, ipady=10, pady=10)
 
-        # Mass Field
-        ttk.Label(self, text="Print Mass (g)", font=("Arial", 12)).pack()
-        self.print_mass = ttk.Entry(self, font=("Arial", 14), width=15)
-        self.print_mass.pack(pady=10)
-        self.print_mass.bind("<Button-1>", lambda e: self.master.open_keyboard(mode="numeric"))
+        btn2 = ttk.Button(self, text="Mark Debt As Paid",
+                         command=lambda: master.switch_frame(PaymentUpdateScreen))
+        btn2.pack(ipadx=20, ipady=10, pady=10)
 
-        # Live Cost Display
-        self.cost_display = ttk.Label(self, text="Cost: £0.00", font=("Arial", 16, "bold"))
-        self.cost_display.pack(pady=20)
-
-        btn_frame = ttk.Frame(self)
-        btn_frame.pack(pady=20)
-
-        ttk.Button(btn_frame, text="Calculate Cost", style="Accent.TButton",
-                  command=self.update_price).pack(side="left", padx=10)
-
-        ttk.Button(btn_frame, text="Save & Exit", style="Accent.TButton",
-                  command=self.handle_save).pack(side="left", padx=10)
-
-        ttk.Button(btn_frame, text="Cancel",
-                  command=lambda: master.switch_frame(StartScreen)).pack(side="left", padx=10)
-
-    def update_price(self):
-        """Safely gets text from entry and updates the display."""
-        raw_val = self.print_mass.get()
-        if raw_val:
-            try:
-                # We pass the string to your function; ensure your function
-                # inside Bath_Cost_Code uses float(Weight) or int(Weight)
-                price = Calculate_Personal_Cost(raw_val)
-                self.cost_display.config(text=f"Cost: £{float(price):.2f}")
-                return price
-            except ValueError:
-                self.cost_display.config(text="Invalid Mass!")
-        return 0
-
-    def handle_save(self):
-        user = self.username.get()
-        price = self.update_price()
-        if user and price:
-            with open("entries.csv", "a", newline="") as f:
-                csv.writer(f).writerow([user, price])
-            self.master.switch_frame(StartScreen)
-
-class SignatureScreen(ttk.Frame): # Changed to ttk.Frame
-    canvaswidth = 300
-    canvasheight = 200
-    def __init__(self, master):
-        super().__init__(master)
-        self.master = master
-
-        ttk.Label(self, text="Please Sign Below", font=("Arial", 18)).pack(pady=10)
-
-        # Note: Canvas remains tk.Canvas (there is no ttk equivalent)
-        # We manually set the highlightthickness to 0 so it blends with the dark theme
-        self.canvas = tk.Canvas(self, bg="white", width=self.canvaswidth, height=self.canvasheight,
-                               relief="ridge", bd=0, highlightthickness=0)
-        self.canvas.pack(pady=20)
-
-        self.image = Image.new("RGB", (self.canvaswidth, self.canvasheight), "white")
-        self.draw = ImageDraw.Draw(self.image)
-        self.last_x, self.last_y = None, None
-
-        self.canvas.bind("<B1-Motion>", self.paint)
-        self.canvas.bind("<ButtonRelease-1>", self.reset_coords)
-
-        btn_frame = ttk.Frame(self) # Changed to ttk.Frame
-        btn_frame.pack(pady=10)
-
-        # ttk.Buttons do not support 'bg' or 'fg'. sv_ttk uses styles instead.
-        ttk.Button(btn_frame, text="Save & Close", style="Accent.TButton",
-                  command=self.save_sig).pack(side="left", padx=20)
-
-        ttk.Button(btn_frame, text="Clear",
-                  command=self.clear).pack(side="left", padx=20)
-
-        ttk.Button(btn_frame, text="Back to Home",
-                  command=lambda: master.switch_frame(StartScreen)).pack(side="left", padx=20)
-
-    def paint(self, event):
-        if self.last_x and self.last_y:
-            self.canvas.create_line(self.last_x, self.last_y, event.x, event.y,
-                                    width=4, fill="black", capstyle=tk.ROUND, smooth=True)
-            self.draw.line([self.last_x, self.last_y, event.x, event.y], fill="black", width=4)
-        self.last_x, self.last_y = event.x, event.y
-
-    def reset_coords(self, event):
-        self.last_x, self.last_y = None, None
-
-    def clear(self):
-        self.canvas.delete("all")
-        self.image = Image.new("RGB", (self.canvaswidth , self.canvasheight), "white")
-        self.draw = ImageDraw.Draw(self.image)
-
-    def save_sig(self):
-        self.image.save("signature.png")
-        self.master.switch_frame(StartScreen)
+        btn3 = ttk.Button(self, text="Cancel",
+                         command=lambda: master.switch_frame(StartScreen))
+        btn3.pack(ipadx=20, ipady=10, pady=10)
 
 if __name__ == "__main__":
     app = App()
