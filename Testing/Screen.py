@@ -13,7 +13,7 @@ class App(tk.Tk):
     def __init__(self):
         super().__init__()
         self.title("Makerspace Portal")
-        self.geometry("1024x600")
+        self.geometry("1300x600")
 
         self.kb_process = None
         self.current_frame = None
