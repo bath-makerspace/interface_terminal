@@ -11,6 +11,8 @@ from datetime import datetime
 from Bath_Cost_Code import Calculate_Personal_Cost
 from Sheet_API import sheet_API
 
+sheet = sheet_API()
+
 class App(tk.Tk):
 
     def __init__(self):
@@ -97,7 +99,6 @@ class PaymentInputScreen(ttk.Frame):
         super().__init__(master)
         self.master = master
         self.signed = False  # Track if the user has signed
-        self.sheet = sheet_API()
 
         # Ensure the signatures folder exists so we don't crash on save
         if not os.path.exists("signatures"):
@@ -205,7 +206,7 @@ class PaymentInputScreen(ttk.Frame):
         timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
 
         if auth_valid and auth != "":
-            auth_code_list = self.sheet.get_possible_auth_code()
+            auth_code_list = sheet.get_possible_auth_code()
             if auth in auth_code_list:
                 auth_valid = True
             else:
@@ -220,7 +221,7 @@ class PaymentInputScreen(ttk.Frame):
             filename = f"signatures/debt_{user}_{timestamp}.png"
             self.image.save(filename)
 
-            self.sheet.add_personal_print_credit(Bath_ID=user, Weight=self.print_mass.get(), AuthCode=auth, Signature_path=filename)
+            sheet.add_personal_print_credit(Bath_ID=user, Weight=self.print_mass.get(), AuthCode=auth, Signature_path=filename)
 
             messagebox.showinfo("Success", "Debt logged successfully!")
             self.master.switch_frame(StartScreen)
