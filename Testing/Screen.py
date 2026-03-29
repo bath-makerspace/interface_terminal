@@ -8,6 +8,7 @@ import subprocess
 from Bath_Cost_Code import Calculate_Personal_Cost
 from tkinter import messagebox
 from datetime import datetime
+style = ttk.Style()
 
 class App(tk.Tk):
     # Apply the theme to the specific app instance
