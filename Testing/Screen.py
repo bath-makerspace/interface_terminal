@@ -263,8 +263,8 @@ class StartScreen(ttk.Frame):
                           command=lambda: master.switch_frame(EquipChoiceScreen))
 
         # We create "windows" on the canvas to hold the buttons
-        self.canvas.create_window(512, 280, window=btn1, width=450, height=120)
-        self.canvas.create_window(512, 450, window=btn2, width=450, height=120)
+        self.canvas.create_window(512, 230, window=btn1, width=400, height=120)
+        self.canvas.create_window(512, 400, window=btn2, width=400, height=120)
 
 class EquipChoiceScreen(ttk.Frame):
     def __init__(self, master):
