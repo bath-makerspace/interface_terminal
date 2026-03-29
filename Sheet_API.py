@@ -26,8 +26,24 @@ class sheet_API:
         self.creds = ServiceAccountCredentials.from_json_keyfile_name("cred.json", self.scopes)
         self.client = gspread.authorize(self.creds)
         drive_creds = Credentials.from_authorized_user_file('token.json', self.scopes)
-        self.drive_service = build('drive', 'v3', credentials=drive_creds)
+        self.drive_service = self.__get_service('credentials.json')
         self.auth_codes = self.__get_possible_online_auth_code()
+    
+    def __get_service(self, cred_file):
+        creds = None
+        if os.path.exists('token.json'):
+            creds = Credentials.from_authorized_user_file('token.json', self.scopes)
+        
+        if not creds or not creds.valid:
+            if creds and creds.expired and creds.refresh_token:
+                creds.refresh(Request())
+            else:
+                flow = InstalledAppFlow.from_client_secrets_file(cred_file, self.scopes)
+                creds = flow.run_local_server(port=0)
+            with open('token.json', 'w') as token:
+                token.write(creds.to_json())
+
+        return build('drive', 'v3', credentials=creds)
 
     def __get_table_column_val(self, spreadsheet_name:str, sheet_name:str, table_range:str):
         
