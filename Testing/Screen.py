@@ -54,52 +54,61 @@ class App(tk.Tk):
 
 
 class PaymentInputScreen(ttk.Frame):
-    canvaswidth = 300
-    canvasheight = 200
-    def __init__(self, master):
+    canvaswidth = 400  # Made slightly larger for the wide layout
+    canvasheight = 250
 
+    def __init__(self, master):
         super().__init__(master)
         self.master = master
 
         # Bind the background of this screen to close the keyboard
         self.bind("<Button-1>", lambda e: self.master.close_keyboard())
 
-        ttk.Label(self, text="Add to Tab", font=("Arial", 18, "bold")).pack(pady=10)
+        # 1. TOP TITLE
+        ttk.Label(self, text="Log 3D Print Debt", font=("Arial", 24, "bold")).pack(pady=20)
 
-        # Username
-        ttk.Label(self, text="Username", font=("Arial", 12)).pack()
-        self.username = ttk.Entry(self, font=("Arial", 14), width=25)
-        self.username.pack(pady=10)
+        # 2. MAIN CONTENT AREA (Horizontal Container)
+        content_container = ttk.Frame(self)
+        content_container.pack(fill="both", expand=True, padx=50)
+
+        # --- LEFT COLUMN (Inputs) ---
+        left_col = ttk.Frame(content_container)
+        left_col.pack(side="left", fill="both", expand=True, padx=20)
+
+        ttk.Label(left_col, text="Username", font=("Arial", 12)).pack(anchor="w")
+        self.username = ttk.Entry(left_col, font=("Arial", 14))
+        self.username.pack(fill="x", pady=(0, 15))
         self.username.bind("<Button-1>", lambda e: self.master.open_keyboard(mode="full"))
-        # Close keyboard when 'Enter' is pressed
         self.username.bind("<Return>", lambda e: self.master.close_keyboard())
 
-        # Mass
-        ttk.Label(self, text="Print Mass (nearest gram)", font=("Arial", 12)).pack()
-        self.print_mass = ttk.Entry(self, font=("Arial", 14), width=15)
-        self.print_mass.pack(pady=10)
+        ttk.Label(left_col, text="Print Mass (nearest gram)", font=("Arial", 12)).pack(anchor="w")
+        self.print_mass = ttk.Entry(left_col, font=("Arial", 14))
+        self.print_mass.pack(fill="x", pady=(0, 15))
         self.print_mass.bind("<Button-1>", lambda e: self.master.open_keyboard(mode="numeric"))
-        # Run calculation AND close keyboard when 'Enter' is pressed
         self.print_mass.bind("<Return>", self.handle_enter_key)
 
-        self.cost_display = ttk.Label(self, text="Cost: £0.00", font=("Arial", 16, "bold"))
-        self.cost_display.pack(pady=10)
-
-        ttk.Label(self, text="Authentication Key", font=("Arial", 12)).pack()
-        ttk.Label(self, text="(Committee Will Fill When You Pay)", font=("Arial", 12)).pack()
-        self.auth_key = ttk.Entry(self, font=("Arial", 14), width=15)
-        self.auth_key.pack(pady=10)
+        ttk.Label(left_col, text="Authentication Key", font=("Arial", 12)).pack(anchor="w")
+        self.auth_key = ttk.Entry(left_col, font=("Arial", 14))
+        self.auth_key.pack(fill="x", pady=(0, 10))
         self.auth_key.bind("<Button-1>", lambda e: self.master.open_keyboard(mode="numeric"))
-        # Run calculation AND close keyboard when 'Enter' is pressed
         self.auth_key.bind("<Return>", self.handle_enter_key)
 
-        ttk.Label(self, text="Please Sign Below", font=("Arial", 18)).pack(pady=10)
-        # Note: Canvas remains tk.Canvas (there is no ttk equivalent)
-        # We manually set the highlightthickness to 0 so it blends with the dark theme
-        self.canvas = tk.Canvas(self, bg="white", width=self.canvaswidth, height=self.canvasheight,
-                                relief="ridge", bd=0, highlightthickness=0)
-        self.canvas.pack(pady=20)
+        self.cost_display = ttk.Label(left_col, text="Cost: £0.00", font=("Arial", 18, "bold"))
+        self.cost_display.pack(pady=10)
 
+        ttk.Button(left_col, text="Update Cost", command=self.update_price).pack(pady=5)
+
+        # --- RIGHT COLUMN (Signature) ---
+        right_col = ttk.Frame(content_container)
+        right_col.pack(side="left", fill="both", expand=True, padx=20)
+
+        ttk.Label(right_col, text="Please Sign Below", font=("Arial", 12)).pack()
+
+        self.canvas = tk.Canvas(right_col, bg="white", width=self.canvaswidth, height=self.canvasheight,
+                                relief="ridge", bd=2, highlightthickness=0)
+        self.canvas.pack(pady=10)
+
+        # PIL Image setup
         self.image = Image.new("RGB", (self.canvaswidth, self.canvasheight), "white")
         self.draw = ImageDraw.Draw(self.image)
         self.last_x, self.last_y = None, None
@@ -107,18 +116,19 @@ class PaymentInputScreen(ttk.Frame):
         self.canvas.bind("<B1-Motion>", self.paint)
         self.canvas.bind("<ButtonRelease-1>", self.reset_coords)
 
-        btn_frame = ttk.Frame(self)  # Changed to ttk.Frame
-        btn_frame.pack(pady=10)
+        ttk.Button(right_col, text="Clear Signature", command=self.clear).pack()
 
-        # ttk.Buttons do not support 'bg' or 'fg'. sv_ttk uses styles instead.
-        ttk.Button(btn_frame, text="Save & Close", style="Accent.TButton",
-                   command=self.save_sig).pack(side="left", padx=20)
+        # 3. BOTTOM BUTTON BAR
+        btn_frame = ttk.Frame(self)
+        btn_frame.pack(side="bottom", pady=40)
 
-        ttk.Button(btn_frame, text="Clear",
-                   command=self.clear).pack(side="left", padx=20)
+        ttk.Button(btn_frame, text="Save & Exit", style="Accent.TButton",
+                   command=self.handle_save).pack(side="left", padx=20, ipadx=20, ipady=10)
 
-        ttk.Button(btn_frame, text="Back to Home",
-                   command=lambda: master.switch_frame(StartScreen)).pack(side="left", padx=20)
+        ttk.Button(btn_frame, text="Cancel",
+                   command=lambda: self.master.switch_frame(StartScreen)).pack(side="left", padx=20, ipadx=20, ipady=10)
+
+    # --- Methods remain mostly the same, but ensure they point to correct variables ---
 
     def paint(self, event):
         if self.last_x and self.last_y:
@@ -135,21 +145,7 @@ class PaymentInputScreen(ttk.Frame):
         self.image = Image.new("RGB", (self.canvaswidth, self.canvasheight), "white")
         self.draw = ImageDraw.Draw(self.image)
 
-    def save_sig(self):
-        self.image.save("signature.png")
-        self.master.switch_frame(StartScreen)
-
-        btn_frame = ttk.Frame(self)
-        btn_frame.pack(pady=20)
-
-        ttk.Button(btn_frame, text="Save & Exit", style="Accent.TButton",
-                   command=self.handle_save).pack(side="left", padx=10)
-
-        ttk.Button(btn_frame, text="Cancel",
-                   command=lambda: self.master.switch_frame(StartScreen)).pack(side="left", padx=10)
-
     def handle_enter_key(self, event):
-        """Triggered when user hits Enter/Return on the virtual keyboard."""
         self.update_price()
         self.master.close_keyboard()
 
@@ -169,6 +165,9 @@ class PaymentInputScreen(ttk.Frame):
         price = self.update_price()
         auth = self.auth_key.get()
         if user and price and auth:
+            # Save the signature named by the user to avoid overwriting
+            self.image.save(f"signatures/{user}_sig.png")
+
             with open("entries.csv", "a", newline="") as f:
                 csv.writer(f).writerow([user, price, auth])
             self.master.switch_frame(StartScreen)
