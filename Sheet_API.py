@@ -37,9 +37,9 @@ class sheet_API:
             all_rows.append(row_dict)
         return all_rows
 
-    def add_personal_print_credit(self, Bath_ID, Weight, AuthCode):
+    def add_personal_print_credit(self, Bath_ID, Weight, AuthCode=""):
         table_details = self.convert_LUT('Credit_Tracker')
-        
+                    
         sheet = self.client.open(table_details["spreadsheet_name"]).worksheet(table_details["sheet_name"])
         
         col = table_details["col"].split(":")
@@ -51,7 +51,7 @@ class sheet_API:
         date = "'"+str(date) # Ensure date is treated as text in Google Sheets
 
         Value = Calculate_Personal_Cost(Weight)
-
+        
         AuthCode = "'"+AuthCode # Ensure AuthCode is treated as text in Google Sheets
         AUTHORISER_FORMULA = f"=VLOOKUP(F{row_values + 1},'Committee/Volunteer'!D:F,2,FALSE)"
 
@@ -59,7 +59,26 @@ class sheet_API:
         target_range = f"{start_col}{row_values + 1}:{end_col}{row_values + 1}"
 
         sheet.update(range_name=target_range, values=[new_row_data],value_input_option='USER_ENTERED')
+            
         print(f"Successfully added row to {table_details['sheet_name']} at {target_range}")
+
+        if AuthCode == "'" or AuthCode is None:
+            pending_table_details = self.convert_LUT('Pending_Payment')
+            pending_sheet = self.client.open(pending_table_details["spreadsheet_name"]).worksheet(pending_table_details["sheet_name"])
+            pending_pay_table = self.__get_table_column_val(pending_table_details["spreadsheet_name"], pending_table_details["sheet_name"], pending_table_details["col"])
+            for index,item in enumerate(pending_pay_table):
+                if item["Bath ID"] == Bath_ID:
+                    pending_row = index + 2 # +1, for header, +1 because index starts at 0
+                    pending_target_range = f"{pending_table_details['col'].split(':')[0]}{pending_row}:{pending_table_details['col'].split(':')[1]}{pending_row}"
+                    weight = int(item["Weight"]) + Weight
+                    Value = float(item["Value"]) + Value
+                    Row_in_Print_Credit = item["Row_in_Printing_Credit"] + "," + str(row_values + 1)
+                    new_pending_data = [Bath_ID, weight, Value, Row_in_Print_Credit]
+                    pending_sheet.update(range_name=pending_target_range, values=[new_pending_data],value_input_option='USER_ENTERED')
+                    print(f"Successfully added row to {pending_table_details['sheet_name']} at {pending_target_range}")
+                    return
+            pending_target_range = f"{pending_table_details['col'].split(':')[0]}{len(pending_sheet.col_values(1))+1}:{pending_table_details['col'].split(':')[1]}{len(pending_sheet.col_values(1))+1}"
+            pending_sheet.update(range_name=pending_target_range, values=[[Bath_ID, Weight, Value,str(row_values + 1)]],value_input_option='USER_ENTERED')
 
     def add_loan_out_entry(self, Bath_ID, Item_Category, Item, AuthCode):
         on_loan_table_details = self.convert_LUT('Loan_Out')
@@ -116,9 +135,27 @@ class sheet_API:
                 break
 
     def get_pending_loans(self):
-        table_details = self.convert_LUT('Pending')
+        table_details = self.convert_LUT('Pending_Loan')
         table_val = self.__get_table_column_val(table_details["spreadsheet_name"], table_details["sheet_name"], table_details["col"])
         return table_val
+    
+    def get_pending_payments(self):
+        table_details = self.convert_LUT('Pending_Payment')
+        table_val = self.__get_table_column_val(table_details["spreadsheet_name"], table_details["sheet_name"], table_details["col"])
+        return table_val
+    
+    def complete_pending_payment(self, Bath_ID, AuthCode):
+        pending_payment_details = self.convert_LUT('Pending_Payment')
+        pending_payment_sheet = self.client.open(pending_payment_details["spreadsheet_name"]).worksheet(pending_payment_details["sheet_name"])
+        pending_payment_table = self.__get_table_column_val(pending_payment_details["spreadsheet_name"], pending_payment_details["sheet_name"], pending_payment_details["col"])
+        pending_payment_sheet.delete_rows(2)
+        # for index, item in enumerate(pending_payment_table):
+        #     if item["Bath ID"] == Bath_ID:
+        #         pending_row = index + 2 # +1, for header, +1 because index starts at 0
+        #         pending_target_range = f"{pending_payment_details['col'].split(':')[0]}{pending_row}:{pending_payment_details['col'].split(':')[1]}{pending_row}"
+        #         pending_payment_sheet.update(range_name=pending_target_range, values=[[item["Bath ID"], item["Weight"], item["Value"], item["Row_in_Printing_Credit"], AuthCode]],value_input_option='USER_ENTERED')
+        #         print(f"Successfully completed pending payment for {Bath_ID} in {pending_payment_details['sheet_name']} at {pending_target_range}")
+        #         return
 
     def add_loan_in_entry(self, Bath_ID, Item, AuthCode):
         pass
@@ -175,5 +212,10 @@ class sheet_API:
 
 if __name__ == "__main__":
     sheet = sheet_API()
+    sheet.add_personal_print_credit("IL356", 11)
+    sheet.add_personal_print_credit("IL356", 40, "9408")
     sheet.add_loan_out_entry("IL356", "IT_Inventory", "Raspberry Pi Zero 2W #1", "9408")
+    print(sheet.get_pending_payments())
+    sheet.complete_pending_payment("IL356", "9408")
+    # sheet.add_loan_out_entry("IL356", "IT_Inventory", "Raspberry Pi Zero 2W #1", "9408")
     
