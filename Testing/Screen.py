@@ -29,17 +29,32 @@ class App(tk.Tk):
         self.current_frame = new_frame
         self.current_frame.pack(fill="both", expand=True)
 
-    def open_keyboard(self, event=None):
-        """Launches the onboard virtual keyboard if not already running."""
+    def open_keyboard(self, event=None, mode="full"):
+        """Launches wvkbd (Wayland-native keyboard)."""
         try:
-            if self.kb_process is None or self.kb_process.poll() is not None:
-                self.kb_process = subprocess.Popen(["onboard"])
+            # Kill any existing keyboard first to avoid multiple instances
+            self.close_keyboard()
+
+            if mode == "numeric":
+                # Opens a dedicated number pad - perfect for 'Print Mass'
+                self.kb_process = subprocess.Popen(["wvkbd-mobintl", "--landscape", "special"])
+            else:
+                # Opens the full standard keyboard
+                self.kb_process = subprocess.Popen(["wvkbd-mobintl", "--landscape"])
+
         except FileNotFoundError:
-            print("Error: Onboard is not installed. Run 'sudo apt install onboard'")
+            print("wvkbd not found. Falling back to onboard...")
+            try:
+                self.kb_process = subprocess.Popen(["onboard"])
+            except:
+                print("No virtual keyboard found.")
 
     def close_keyboard(self):
-        """Terminates the virtual keyboard process."""
-        if self.kb_process and self.kb_process.poll() is None:
+        """Kills wvkbd or onboard."""
+        # We use pkill here because wvkbd sometimes detaches from the subprocess
+        subprocess.run(["pkill", "wvkbd-mobintl"], stderr=subprocess.DEVNULL)
+        subprocess.run(["pkill", "onboard"], stderr=subprocess.DEVNULL)
+        if self.kb_process:
             self.kb_process.terminate()
             self.kb_process = None
 
@@ -96,14 +111,14 @@ class PaymentInputScreen(ttk.Frame):
         self.username = ttk.Entry(self, font=("Arial", 12), width=20)
         self.username.pack(pady=15)
         # Bind tap to open keyboard
-        self.username.bind("<Button-1>", self.master.open_keyboard)
+        self.username.bind("<Button-1>", lambda e: self.master.open_keyboard(mode="full"))
 
         # Print Mass Entry
         ttk.Label(self, text="Print mass (g)", font=("Arial", 12)).pack(pady=5)
         self.print_mass = ttk.Entry(self, font=("Arial", 12), width=10)
         self.print_mass.pack(pady=15)
         # Bind tap to open keyboard
-        self.print_mass.bind("<Button-1>", self.master.open_keyboard)
+        self.print_mass.bind("<Button-1>", lambda e: self.master.open_keyboard(mode="numeric"))
 
         # Result display
         self.result_label = ttk.Label(self, text="Total Cost: £0.00", font=("Arial", 14, "bold"))
