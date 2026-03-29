@@ -12,8 +12,8 @@ from datetime import datetime
 class App(tk.Tk):
     def __init__(self):
         super().__init__()
-        self.title("Makerspace Portal")
-        self.geometry("1300x600")
+        self.title("Makerspace Information Terminal")
+        self.geometry("1024x600")
 
         self.kb_process = None
         self.current_frame = None
@@ -223,7 +223,7 @@ class StartScreen(ttk.Frame):
         # --- BACKGROUND LOGO LOGIC ---
         try:
             # 1. Load the original image
-            original_logo = Image.open("your_logo.png").convert("RGBA")
+            original_logo = Image.open("transparent_png_logo_final.png").convert("RGBA")
 
             # 2. Resize it (e.g., to 400x400 or whatever fits your 1024x600 screen)
             logo_resized = original_logo.resize((400, 400), Image.Resampling.LANCZOS)
@@ -246,7 +246,7 @@ class StartScreen(ttk.Frame):
 
         # --- EXISTING BUTTONS ---
         # The buttons will naturally sit on top of the placed image
-        label = ttk.Label(self, text="Welcome To The Makerspace Debt Portal",
+        label = ttk.Label(self, text="Welcome To The Makerspace Information Terminal",
                           font=("Arial", 24, "bold"))
         label.pack(pady=(80, 40))  # More top padding to move text off the logo center
 
