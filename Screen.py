@@ -452,7 +452,7 @@ class EquipLoanScreen(ttk.Frame):
         if not user or not item or not auth_valid:
             messagebox.showwarning("Incomplete", "Username, Item, Signature, and 4-Digit Auth are REQUIRED.")
         else:
-            sheet.add_loan_out_entry(Bath_ID=user, Category=self.current_category, Item=item, AuthCode=auth)
+            sheet.add_loan_out_entry(Bath_ID=user, Item_Category=self.current_category, Item=item, AuthCode=auth)
             messagebox.showinfo("Success", f"{item} loaned to {user}!")
             self.master.switch_frame(StartScreen)
 
