@@ -407,103 +407,113 @@ class EquipLoanScreen(ttk.Frame):
 
 
 class EquipReturnScreen(ttk.Frame):
-    canvaswidth = 350
-    canvasheight = 200
-
     def __init__(self, master):
         super().__init__(master)
         self.master = master
-        self.signed = False
+
+        # Pull the fresh list of loaned items from the CSV
         self.loaned_items = self.master.get_loaned_items()
 
+        # Background tap closes keyboard
         self.bind("<Button-1>", lambda e: self.master.close_keyboard())
 
-        ttk.Label(self, text="Return Equipment", font=("Arial", 20, "bold")).pack(pady=10)
+        # 1. TOP TITLE
+        ttk.Label(self, text="Return Equipment", font=("Arial", 20, "bold")).pack(pady=15)
 
+        # 2. MAIN CONTENT AREA
         content_container = ttk.Frame(self)
         content_container.pack(fill="both", expand=True, padx=40)
 
-        # --- LEFT COLUMN (Selection) ---
+        # --- LEFT COLUMN (Item Selection) ---
         left_col = ttk.Frame(content_container)
         left_col.pack(side="left", fill="both", expand=True, padx=20)
 
-        ttk.Label(left_col, text="Select Item to Return", font=("Arial", 12, "bold")).pack(pady=5)
+        ttk.Label(left_col, text="1. Select Item to Return", font=("Arial", 12, "bold")).pack(pady=5)
 
         list_container = ttk.Frame(left_col)
-        list_container.pack(fill="both", expand=True)
+        list_container.pack(fill="both", expand=True, pady=10)
 
-        self.item_listbox = tk.Listbox(list_container, font=("Arial", 16), height=6, exportselection=False)
+        # Large Listbox for fingers
+        self.item_listbox = tk.Listbox(
+            list_container,
+            font=("Arial", 16),
+            height=6,
+            exportselection=False,
+            selectbackground="#007fff"
+        )
         self.item_listbox.pack(side="left", fill="both", expand=True)
 
-        # Populate with ONLY loaned items
-        for item in sorted(self.loaned_items):
-            self.item_listbox.insert(tk.END, f"  {item}")
+        # Populate with ONLY items currently out
+        if not self.loaned_items:
+            self.item_listbox.insert(tk.END, "  No items currently loaned out")
+            self.item_listbox.config(state="disabled")
+        else:
+            for item in sorted(self.loaned_items):
+                self.item_listbox.insert(tk.END, f"  {item}")
 
-        scrollbar = ttk.Scrollbar(list_container, orient="vertical", command=self.item_listbox.yview)
-        scrollbar.pack(side="right", fill="y")
-        self.item_listbox.config(yscrollcommand=scrollbar.set)
+        # Thick scrollbar for touchscreen
+        scrollbar_style = ttk.Style()
+        scrollbar_style.configure("Return.Vertical.TScrollbar", arrowsize=25)
+
+        self.scrollbar = ttk.Scrollbar(list_container, orient="vertical",
+                                       command=self.item_listbox.yview,
+                                       style="Return.Vertical.TScrollbar")
+        self.scrollbar.pack(side="right", fill="y")
+        self.item_listbox.config(yscrollcommand=self.scrollbar.set)
 
         # --- RIGHT COLUMN (Verification) ---
         right_col = ttk.Frame(content_container)
         right_col.pack(side="left", fill="both", expand=True, padx=20)
 
+        ttk.Label(right_col, text="2. Your Details", font=("Arial", 12, "bold")).pack(pady=10)
+
         ttk.Label(right_col, text="Username", font=("Arial", 11)).pack(anchor="w")
         self.username = ttk.Entry(right_col, font=("Arial", 14))
-        self.username.pack(fill="x", pady=5)
+        self.username.pack(fill="x", pady=(0, 20))
         self.username.bind("<Button-1>", lambda e: self.master.open_keyboard(mode="full"))
+        self.username.bind("<Return>", lambda e: self.master.close_keyboard())
 
         ttk.Label(right_col, text="Auth Key (Committee Only)", font=("Arial", 11)).pack(anchor="w")
+        ttk.Label(right_col, text="(Leave blank if not paying debt now)", font=("Arial", 9, "italic")).pack(anchor="w")
         self.auth_key = ttk.Entry(right_col, font=("Arial", 14))
-        self.auth_key.pack(fill="x", pady=5)
+        self.auth_key.pack(fill="x", pady=(0, 10))
         self.auth_key.bind("<Button-1>", lambda e: self.master.open_keyboard(mode="numeric"))
+        self.auth_key.bind("<Return>", lambda e: self.master.close_keyboard())
 
-        self.canvas = tk.Canvas(right_col, bg="white", width=self.canvaswidth, height=self.canvasheight, bd=2,
-                                relief="ridge")
-        self.canvas.pack(pady=5)
-        self.image = Image.new("RGB", (self.canvaswidth, self.canvasheight), "white")
-        self.draw = ImageDraw.Draw(self.image)
-        self.last_x, self.last_y = None, None
-        self.canvas.bind("<B1-Motion>", self.paint)
-        self.canvas.bind("<ButtonRelease-1>", self.reset_coords)
-
-        # --- BOTTOM BUTTONS ---
+        # 3. BOTTOM BUTTON BAR
         btn_frame = ttk.Frame(self)
-        btn_frame.pack(side="bottom", pady=20)
+        btn_frame.pack(side="bottom", pady=40)
 
-        ttk.Button(btn_frame, text="Confirm Return", style="Accent.TButton", command=self.handle_save).pack(side="left",
-                                                                                                            padx=10)
-        ttk.Button(btn_frame, text="Cancel", command=lambda: self.master.switch_frame(StartScreen)).pack(side="left",
-                                                                                                         padx=10)
+        ttk.Button(btn_frame, text="Confirm Return", style="Accent.TButton",
+                   command=self.handle_save).pack(side="left", padx=20, ipadx=20, ipady=10)
 
-    def paint(self, event):
-        if self.last_x and self.last_y:
-            self.canvas.create_line(self.last_x, self.last_y, event.x, event.y, width=4, fill="black",
-                                    capstyle=tk.ROUND, smooth=True)
-            self.draw.line([self.last_x, self.last_y, event.x, event.y], fill="black", width=4)
-            self.signed = True
-        self.last_x, self.last_y = event.x, event.y
-
-    def reset_coords(self, event):
-        self.last_x, self.last_y = None, None
+        ttk.Button(btn_frame, text="Cancel",
+                   command=lambda: self.master.switch_frame(StartScreen)).pack(side="left", padx=20, ipadx=20, ipady=10)
 
     def handle_save(self):
         user = self.username.get().strip()
         auth = self.auth_key.get().strip()
+
+        # Get item selection
         selection = self.item_listbox.curselection()
         item = self.item_listbox.get(selection[0]).strip() if selection else None
 
+        # Logic: Auth must be empty OR exactly 4 digits
         auth_valid = (auth == "" or (len(auth) == 4 and auth.isdigit()))
 
-        if not (user and item and self.signed and auth_valid):
-            messagebox.showwarning("Incomplete", "Check Username, Selection, Signature, and 4-digit Auth.")
-            return
+        if not user:
+            messagebox.showwarning("Incomplete", "Please enter your Username.")
+        elif not item or "No items" in item:
+            messagebox.showwarning("Incomplete", "Please select an item to return.")
+        elif not auth_valid:
+            messagebox.showwarning("Invalid Auth", "Auth Key must be empty or 4 digits.")
+        else:
+            # Append to loans.csv with RETURNED status
+            with open("loans.csv", "a", newline="") as f:
+                csv.writer(f).writerow([user, "N/A", item, "RETURNED", auth])
 
-        with open("loans.csv", "a", newline="") as f:
-            # We don't necessarily need the category for return, but we'll log 'N/A' or search it
-            csv.writer(f).writerow([user, "Returning", item, "RETURNED", auth])
-
-        messagebox.showinfo("Success", f"{item} returned!")
-        self.master.switch_frame(StartScreen)
+            messagebox.showinfo("Success", f"Item '{item}' returned successfully!")
+            self.master.switch_frame(StartScreen)
 
 if __name__ == "__main__":
     app = App()
