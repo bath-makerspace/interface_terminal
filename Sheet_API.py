@@ -2,18 +2,31 @@ import gspread
 import pandas as pd
 import os
 from oauth2client.service_account import ServiceAccountCredentials
+from google.auth.transport.requests import Request
+from google.oauth2.credentials import Credentials
+from google_auth_oauthlib.flow import InstalledAppFlow
+from googleapiclient.discovery import build
+from googleapiclient.http import MediaFileUpload
 from datetime import datetime
+
 
 from Testing.Bath_Cost_Code import Calculate_Personal_Cost
 
 cwd = os.getcwd()
 
+FOLDER_ID = "17Xr7pnq8oAOIVm8Zn3ErjTXV-s2avHju" # Folder ID for signature in Google Drive
+image_file_format = "png"
 
 class sheet_API:
     def __init__(self):
-        self.scopes = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive","https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
+        self.scopes = ["https://spreadsheets.google.com/feeds", 
+                       "https://www.googleapis.com/auth/drive", # Might want to change this to a more restrictive scope if possible
+                       "https://www.googleapis.com/auth/spreadsheets", 
+                       "https://www.googleapis.com/auth/drive"]
         self.creds = ServiceAccountCredentials.from_json_keyfile_name("cred.json", self.scopes)
         self.client = gspread.authorize(self.creds)
+        drive_creds = Credentials.from_authorized_user_file('token.json', self.scopes)
+        self.drive_service = build('drive', 'v3', credentials=drive_creds)
 
     def __get_table_column_val(self, spreadsheet_name:str, sheet_name:str, table_range:str):
         
@@ -43,7 +56,22 @@ class sheet_API:
                 raise ValueError(f"Invalid column string: {col_str}")
         return num
 
-    def add_personal_print_credit(self, Bath_ID:str, Weight:int, AuthCode:str=""):
+    def __upload_image_to_drive(self, image_path:str) -> str:
+        file_metadata = {'name': os.path.basename(image_path), 'mimeType': f'image/{image_file_format}', 'parents': [FOLDER_ID]}
+        media = MediaFileUpload(image_path, mimetype=f'image/{image_file_format}', resumable=True)
+
+        file = self.drive_service.files().create(body=file_metadata, media_body=media, fields='id').execute()
+
+        file_id = file.get('id')
+        self.drive_service.permissions().create(
+            fileId=file_id,
+            body={'type': 'anyone', 'role': 'reader'}
+        ).execute()
+
+        direct_link = f"https://drive.google.com/uc?export=download&id={file_id}"
+        return direct_link
+
+    def add_personal_print_credit(self, Bath_ID:str, Weight:int, AuthCode:str="", Signature_path:str=""):
         table_details = self.convert_LUT('Credit_Tracker')
                     
         sheet = self.client.open(table_details["spreadsheet_name"]).worksheet(table_details["sheet_name"])
@@ -59,13 +87,16 @@ class sheet_API:
         Value = Calculate_Personal_Cost(Weight)
         
         AuthCode = "'"+AuthCode # Ensure AuthCode is treated as text in Google Sheets
-        AUTHORISER_FORMULA = f"=VLOOKUP(F{row_values + 1},'Committee/Volunteer'!D:F,2,FALSE)"
+        AUTHORISER_FORMULA = f"=VLOOKUP(G{row_values + 1},'Committee/Volunteer'!D:F,2,FALSE)"
 
-        new_row_data = [date, Bath_ID, Weight, Value, AUTHORISER_FORMULA, AuthCode]
+        sign_url = self.__upload_image_to_drive(Signature_path)
+        Signature = f'=IMAGE("{sign_url}", 4, 50, 50)'
+
+        new_row_data = [date, Bath_ID, Weight, Value, Signature , AUTHORISER_FORMULA, AuthCode]
         target_range = f"{start_col}{row_values + 1}:{end_col}{row_values + 1}"
 
         sheet.update(range_name=target_range, values=[new_row_data],value_input_option='USER_ENTERED')
-            
+        os.remove(Signature_path) # Remove the image from local storage after uploading to Google Drive   
         print(f"Successfully added row to {table_details['sheet_name']} at {target_range}")
 
         if AuthCode == "'" or AuthCode is None:
@@ -275,10 +306,10 @@ class sheet_API:
 
 if __name__ == "__main__":
     sheet = sheet_API()
-    items = sheet.get_available_equipment_inventory("Mechanical_tools")
-    for item in items:
-        print(item)
-    # sheet.add_personal_print_credit("HH940", 11)
+    # items = sheet.get_available_equipment_inventory("Mechanical_tools")
+    # for item in items:
+    #     print(item)
+    sheet.add_personal_print_credit("HH940", 11,Signature_path= "2.png")
     # sheet.add_personal_print_credit("IL356", 11)
     # sheet.add_personal_print_credit("IL356", 40, "9408")
     # sheet.add_loan_out_entry("IL356", "IT_Inventory", "Raspberry Pi Zero 2W #1", "9408")
