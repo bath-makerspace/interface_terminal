@@ -639,9 +639,9 @@ class PaymentUpdateScreen(ttk.Frame):
         if auth_valid:
             sheet.complete_pending_payment(Bath_ID=selected_row_data["Bath ID"], AuthCode=auth)
             messagebox.showinfo("Success", "Record updated.")
+            self.master.switch_frame(StartScreen)
         else:
             messagebox.showwarning("Invalid Auth", "Auth Key must be 4 digits and valid.")
-        self.master.switch_frame(StartScreen)
 
 if __name__ == "__main__":
     app = App()

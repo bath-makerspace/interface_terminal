@@ -27,6 +27,7 @@ class sheet_API:
         self.client = gspread.authorize(self.creds)
         drive_creds = Credentials.from_authorized_user_file('token.json', self.scopes)
         self.drive_service = build('drive', 'v3', credentials=drive_creds)
+        self.auth_codes = self.__get_possible_online_auth_code()
 
     def __get_table_column_val(self, spreadsheet_name:str, sheet_name:str, table_range:str):
         
@@ -248,6 +249,9 @@ class sheet_API:
                 break
 
     def get_possible_auth_code(self) -> list:   
+        return self.auth_codes
+
+    def __get_possible_online_auth_code(self) -> list:   
         table_details = self.convert_LUT('Auth_Code')
         table_val = self.__get_table_column_val(table_details["spreadsheet_name"], table_details["sheet_name"], table_details["col"])
         auth_codes = []
