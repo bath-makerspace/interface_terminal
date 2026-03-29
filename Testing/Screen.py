@@ -186,6 +186,27 @@ class PaymentInputScreen(ttk.Frame):
             messagebox.showinfo("Success", "Debt logged successfully!")
             self.master.switch_frame(StartScreen)
 
+class StartScreen(ttk.Frame):
+    def __init__(self, master):
+        super().__init__(master)
+
+        label = ttk.Label(self, text="Welcome To The Makerspace Debt Portal", font=("Arial", 24))
+        label.pack(pady=100)
+
+        # Using style="Accent.TButton" (provided by sv_ttk) for the primary action
+        # btn1 = ttk.Button(self, text="Test Signature Pad",
+        #                  style="Accent.TButton",
+        #                  command=lambda: master.switch_frame(SignatureScreen))
+        # btn1.pack(ipadx=20, ipady=10, pady=10)
+
+        btn2 = ttk.Button(self, text="Log 3D Print Debt",
+                         command=lambda: master.switch_frame(PaymentChoiceScreen))
+        btn2.pack(ipadx=20, ipady=10, pady=10)
+
+        btn2 = ttk.Button(self, text="Equipment",
+                         command=lambda: master.switch_frame(EquipChoiceScreen))
+        btn2.pack(ipadx=20, ipady=10, pady=10)
+
 class EquipChoiceScreen(ttk.Frame):
     def __init__(self, master):
         super().__init__(master)
