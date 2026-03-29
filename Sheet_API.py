@@ -11,14 +11,11 @@ cwd = os.getcwd()
 
 class sheet_API:
     def __init__(self):
-        cred_filename = "cred.json"
-        cred_path = os.path.join(cwd, cred_filename)
-        self.scopes = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive","https://www.googleapis.com/auth/spreadsheets"]
+        self.scopes = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive","https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
         self.creds = ServiceAccountCredentials.from_json_keyfile_name("cred.json", self.scopes)
         self.client = gspread.authorize(self.creds)
 
-
-    def __get_table_column_val(self, spreadsheet_name, sheet_name, table_range):
+    def __get_table_column_val(self, spreadsheet_name:str, sheet_name:str, table_range:str):
         
         spreadsheet_name = spreadsheet_name.strip()
         sheet_name = sheet_name.strip()
@@ -37,7 +34,7 @@ class sheet_API:
             all_rows.append(row_dict)
         return all_rows
 
-    def __col_to_num(self,col_str):
+    def __col_to_num(self,col_str:str) -> int:
         num = 0
         for c in col_str:
             if 'A' <= c <= 'Z':
@@ -46,7 +43,7 @@ class sheet_API:
                 raise ValueError(f"Invalid column string: {col_str}")
         return num
 
-    def add_personal_print_credit(self, Bath_ID, Weight, AuthCode=""):
+    def add_personal_print_credit(self, Bath_ID:str, Weight:int, AuthCode:str=""):
         table_details = self.convert_LUT('Credit_Tracker')
                     
         sheet = self.client.open(table_details["spreadsheet_name"]).worksheet(table_details["sheet_name"])
@@ -91,7 +88,7 @@ class sheet_API:
             pending_target_range = f"{pending_table_details['col'].split(':')[0]}{len(pending_sheet.col_values(self.__col_to_num(pending_start_col)))+1}:{pending_table_details['col'].split(':')[1]}{len(pending_sheet.col_values(self.__col_to_num(pending_start_col)))+1}"
             pending_sheet.update(range_name=pending_target_range, values=[[Bath_ID, Weight, Value,str(row_values + 1)]],value_input_option='USER_ENTERED')
 
-    def add_loan_out_entry(self, Bath_ID, Item_Category, Item, AuthCode):
+    def add_loan_out_entry(self, Bath_ID:str, Item_Category:str, Item:str, AuthCode:str):
         on_loan_table_details = self.convert_LUT('Loan_Out')
         pending_table_details = self.convert_LUT('Pending_Loan')
         inventory_table_details = self.convert_LUT(Item_Category)
@@ -155,7 +152,7 @@ class sheet_API:
         table_val = self.__get_table_column_val(table_details["spreadsheet_name"], table_details["sheet_name"], table_details["col"])
         return table_val
     
-    def complete_pending_payment(self, Bath_ID, AuthCode):
+    def complete_pending_payment(self, Bath_ID:str, AuthCode:str):
         pending_payment_details = self.convert_LUT('Pending_Payment')
         pending_payment_sheet = self.client.open(pending_payment_details["spreadsheet_name"]).worksheet(pending_payment_details["sheet_name"])
         pending_payment_table = self.__get_table_column_val(pending_payment_details["spreadsheet_name"], pending_payment_details["sheet_name"], pending_payment_details["col"])
@@ -178,7 +175,7 @@ class sheet_API:
             printing_credit_sheet.update(range_name=printing_credit_target_range, values=[[AuthCode]],value_input_option='USER_ENTERED')
             print(f"Successfully completed pending payment for {Bath_ID} in {printing_credit_details['sheet_name']} at {printing_credit_target_range}")
 
-    def add_loan_in_entry(self, Bath_ID, Item_Category, Item, AuthCode):
+    def add_loan_in_entry(self, Bath_ID:str, Item_Category:str, Item:str, AuthCode:str):
         on_loan_in_table = self.convert_LUT('Loan_In')
         pending_table_details = self.convert_LUT('Pending_Loan')
         inventory_table_details = self.convert_LUT(Item_Category)
@@ -219,7 +216,6 @@ class sheet_API:
                 print(f"Successfully updated {Item} status to Available in {inventory_table_details['sheet_name']} at {inventory_target_range}")
                 break
 
-
     def get_possible_auth_code(self) -> list:   
         table_details = self.convert_LUT('Auth_Code')
         table_val = self.__get_table_column_val(table_details["spreadsheet_name"], table_details["sheet_name"], table_details["col"])
@@ -228,7 +224,7 @@ class sheet_API:
             auth_codes.append(row["Auth Key"])
         return auth_codes
 
-    def convert_LUT(self,target_name) -> str:
+    def convert_LUT(self,target_name:str) -> str:
         csv_filename = "Sheet_LUT.csv"
         csv_filepath = os.path.join(cwd, csv_filename)
 
@@ -269,14 +265,24 @@ class sheet_API:
         table_val = self.__get_table_column_val(table_details["spreadsheet_name"], table_details["sheet_name"], table_details["col"])
         return table_val
 
+    def get_available_equipment_inventory(self,catergory):
+        inventory = self.get_equipment_inventory(catergory)
+        available_inventory = []
+        for item in inventory:
+            if item["Location"] != "On Loan":
+                available_inventory.append(item)
+        return available_inventory
+
 if __name__ == "__main__":
     sheet = sheet_API()
-
+    items = sheet.get_available_equipment_inventory("Mechanical_tools")
+    for item in items:
+        print(item)
     # sheet.add_personal_print_credit("HH940", 11)
     # sheet.add_personal_print_credit("IL356", 11)
     # sheet.add_personal_print_credit("IL356", 40, "9408")
-    sheet.add_loan_out_entry("IL356", "IT_Inventory", "Raspberry Pi Zero 2W #1", "9408")
-    sheet.add_loan_in_entry("IL356", "IT_Inventory", "Raspberry Pi Zero 2W #1", "9408")
+    # sheet.add_loan_out_entry("IL356", "IT_Inventory", "Raspberry Pi Zero 2W #1", "9408")
+    # sheet.add_loan_in_entry("IL356", "IT_Inventory", "Raspberry Pi Zero 2W #1", "9408")
     # print(sheet.get_pending_payments())
     # sheet.complete_pending_payment("HH940", "9408")
     # sheet.add_loan_out_entry("IL356", "IT_Inventory", "Raspberry Pi Zero 2W #1", "9408")
