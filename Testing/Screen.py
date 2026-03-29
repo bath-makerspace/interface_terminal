@@ -54,7 +54,10 @@ class App(tk.Tk):
 
 
 class PaymentInputScreen(ttk.Frame):
+    canvaswidth = 300
+    canvasheight = 200
     def __init__(self, master):
+
         super().__init__(master)
         self.master = master
 
@@ -90,11 +93,7 @@ class PaymentInputScreen(ttk.Frame):
         # Run calculation AND close keyboard when 'Enter' is pressed
         self.auth_key.bind("<Return>", self.handle_enter_key)
 
-        canvaswidth = 300
-        canvasheight = 200
-
         ttk.Label(self, text="Please Sign Below", font=("Arial", 18)).pack(pady=10)
-
         # Note: Canvas remains tk.Canvas (there is no ttk equivalent)
         # We manually set the highlightthickness to 0 so it blends with the dark theme
         self.canvas = tk.Canvas(self, bg="white", width=self.canvaswidth, height=self.canvasheight,
@@ -147,7 +146,7 @@ class PaymentInputScreen(ttk.Frame):
                    command=self.handle_save).pack(side="left", padx=10)
 
         ttk.Button(btn_frame, text="Cancel",
-                   command=lambda: master.switch_frame(StartScreen)).pack(side="left", padx=10)
+                   command=lambda: self.master.switch_frame(StartScreen)).pack(side="left", padx=10)
 
     def handle_enter_key(self, event):
         """Triggered when user hits Enter/Return on the virtual keyboard."""
