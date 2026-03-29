@@ -226,11 +226,11 @@ class StartScreen(ttk.Frame):
             original_logo = Image.open("transparent_png_logo_final.png").convert("RGBA")
 
             # 2. Resize it (e.g., to 400x400 or whatever fits your 1024x600 screen)
-            logo_resized = original_logo.resize((400, 400), Image.Resampling.LANCZOS)
+            logo_resized = original_logo.resize((800, 800), Image.Resampling.LANCZOS)
 
             # 3. Adjust Opacity (0.1 is 10% opacity, 0.2 is 20%, etc.)
             alpha = logo_resized.split()[3]
-            alpha = ImageEnhance.Brightness(alpha).enhance(0.1)
+            alpha = ImageEnhance.Brightness(alpha).enhance(0.2)
             logo_resized.putalpha(alpha)
 
             # 4. Convert to a format Tkinter understands
@@ -239,7 +239,7 @@ class StartScreen(ttk.Frame):
             # 5. Create a label to hold the image and place it in the center
             # We use a standard tk.Label here so we can set a transparent background
             self.bg_label = tk.Label(self, image=self.bg_image)
-            self.bg_label.place(relx=0.5, rely=0.5, anchor="center")
+            self.bg_label.place(relx=0.3, rely=0.5, anchor="center")
 
         except FileNotFoundError:
             print("Logo file not found, skipping background image.")
@@ -250,11 +250,11 @@ class StartScreen(ttk.Frame):
                           font=("Arial", 24, "bold"))
         label.pack(pady=(80, 40))  # More top padding to move text off the logo center
 
-        btn1 = ttk.Button(self, text="Log 3D Print Debt",
+        btn1 = ttk.Button(self, text="3D Printing Service",
                           command=lambda: master.switch_frame(PaymentChoiceScreen))
         btn1.pack(ipadx=20, ipady=15, pady=10)
 
-        btn2 = ttk.Button(self, text="Equipment Portal",
+        btn2 = ttk.Button(self, text="Equipment Service",
                           command=lambda: master.switch_frame(EquipChoiceScreen))
         btn2.pack(ipadx=20, ipady=15, pady=10)
 
