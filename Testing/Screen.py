@@ -12,7 +12,7 @@ from tkinter import messagebox
 class App(tk.Tk):
     def __init__(self):
         super().__init__()
-        self.title("Makerspace Debt Portal")
+        self.title("Makerspace Portal")
         self.geometry("1024x600")
 
         self.kb_process = None
@@ -188,8 +188,9 @@ class StartScreen(ttk.Frame):
         super().__init__(master)
 
         label = ttk.Label(self, text="Welcome to the Makerspace Portal,", font=("Arial", 24))
-        label = ttk.Label(self, text="what would you like to access?", font=("Arial", 24))
-        label.pack(pady=100)
+        label.pack()
+        label1 = ttk.Label(self, text="what would you like to access?", font=("Arial", 24))
+        label1.pack(pady=100)
 
         # Using style="Accent.TButton" (provided by sv_ttk) for the primary action
         # btn1 = ttk.Button(self, text="Test Signature Pad",
