@@ -8,9 +8,9 @@ import subprocess
 from Bath_Cost_Code import Calculate_Personal_Cost
 from tkinter import messagebox
 from datetime import datetime
-style = ttk.Style()
 
 class App(tk.Tk):
+
     def __init__(self):
         super().__init__()
         self.title("Makerspace Information Terminal")
@@ -221,82 +221,88 @@ class StartScreen(ttk.Frame):
         super().__init__(master)
         self.master = master
 
-        # --- BACKGROUND LOGO LOGIC ---
+        # 1. Create a Canvas that fills the whole frame
+        # We set highlightthickness=0 so there is no border
+        self.canvas = tk.Canvas(self, highlightthickness=0, bd=0)
+        self.canvas.pack(fill="both", expand=True)
+
+        # 2. Add the Logo to the Canvas
         try:
-            # 1. Load the original image
+            # We process the logo here once
             original_logo = Image.open("transparent_png_logo_final.png").convert("RGBA")
+            logo_resized = original_logo.resize((600, 600), Image.Resampling.LANCZOS)
 
-            # 2. Resize it (e.g., to 400x400 or whatever fits your 1024x600 screen)
-            logo_resized = original_logo.resize((800, 800), Image.Resampling.LANCZOS)
-
-            # 3. Adjust Opacity (0.1 is 10% opacity, 0.2 is 20%, etc.)
+            # Opacity logic (0.1 for 10% visibility)
             alpha = logo_resized.split()[3]
-            alpha = ImageEnhance.Brightness(alpha).enhance(0.2)
+            alpha = ImageEnhance.Brightness(alpha).enhance(0.1)
             logo_resized.putalpha(alpha)
 
-            # 4. Convert to a format Tkinter understands
-            self.bg_image = ImageTk.PhotoImage(logo_resized)
+            self.bg_image = ImageTk.PhotoImage(logo_resized, master=self.master)
 
-            # 5. Create a label to hold the image and place it in the center
-            # We use a standard tk.Label here so we can set a transparent background
-            self.bg_label = tk.Label(self, image=self.bg_image)
-            self.bg_label.place(relx=0.3, rely=0.5, anchor="center")
-
+            # Place logo on canvas (relx=0.2, rely=0.5 as per your original)
+            # 1024 * 0.2 = 205, 600 * 0.5 = 300
+            self.canvas.create_image(205, 300, image=self.bg_image, anchor="center")
         except FileNotFoundError:
-            print("Logo file not found, skipping background image.")
+            print("Logo file not found.")
 
-        # --- EXISTING BUTTONS ---
-        # The buttons will naturally sit on top of the placed image
-        label = ttk.Label(self, text="Welcome To The Makerspace Information Terminal",
-                          font=("Arial", 32, "bold"))
-        label.pack(pady=(80, 40))  # More top padding to move text off the logo center
+        # 3. Add the TRANSPARENT Title Text to the Canvas
+        # Because it's drawn on the canvas, it has no background box!
+        self.canvas.create_text(
+            512, 80,  # Centered horizontally (1024/2), 80 pixels down
+            text="Welcome To The Makerspace Information Terminal",
+            font=("Arial", 28, "bold"),
+            fill="black",  # Or "white" if you switch to dark mode
+            justify="center"
+        )
 
-        style.configure('Big.TButton', font=('Arial', 18, 'bold'))
+        # 4. Add the Buttons
+        # Since buttons are complex, we "embed" them into the canvas
         btn1 = ttk.Button(self, text="3D Printing Service", style="Big.TButton",
                           command=lambda: master.switch_frame(PaymentChoiceScreen))
-        btn1.pack(ipadx=40, ipady=30, pady=10)
-
         btn2 = ttk.Button(self, text="Equipment Service", style="Big.TButton",
                           command=lambda: master.switch_frame(EquipChoiceScreen))
-        btn2.pack(ipadx=40, ipady=30, pady=10)
+
+        # We create "windows" on the canvas to hold the buttons
+        self.canvas.create_window(512, 230, window=btn1, width=400, height=120)
+        self.canvas.create_window(512, 400, window=btn2, width=400, height=120)
 
 class EquipChoiceScreen(ttk.Frame):
     def __init__(self, master):
         super().__init__(master)
 
         label = ttk.Label(self, text="", font=("Arial", 24))
-        label.pack(pady=75)
+        label.pack(pady=20)
 
         btn1 = ttk.Button(self, text="Loaning Equipment",
                          command=lambda: master.switch_frame(EquipLoanScreen))
-        btn1.pack(ipadx=20, ipady=10, pady=10)
+        btn1.pack(ipadx=60, ipady=45, pady=15)
 
         btn2 = ttk.Button(self, text="Returning Equipment",
                          command=lambda: master.switch_frame(EquipReturnScreen))
-        btn2.pack(ipadx=20, ipady=10, pady=10)
+        btn2.pack(ipadx=60, ipady=45, pady=15)
 
         btn3 = ttk.Button(self, text="Cancel",
                          command=lambda: master.switch_frame(StartScreen))
-        btn3.pack(ipadx=20, ipady=10, pady=10)
+        btn3.pack(ipadx=30, ipady=15, pady=10)
 
 class PaymentChoiceScreen(ttk.Frame):
     def __init__(self, master):
         super().__init__(master)
 
         label = ttk.Label(self, text="", font=("Arial", 24))
-        label.pack(pady=75)
+        label.pack(pady=20)
 
         btn1 = ttk.Button(self, text="Log New Print Debt",
                          command=lambda: master.switch_frame(PaymentInputScreen))
-        btn1.pack(ipadx=20, ipady=10, pady=10)
+        btn1.pack(ipadx=60, ipady=45, pady=15)
 
         btn2 = ttk.Button(self, text="Mark Debt As Paid",
                          command=lambda: master.switch_frame(PaymentUpdateScreen))
-        btn2.pack(ipadx=20, ipady=10, pady=10)
+        btn2.pack(ipadx=60, ipady=45, pady=15)
 
         btn3 = ttk.Button(self, text="Cancel",
                          command=lambda: master.switch_frame(StartScreen))
-        btn3.pack(ipadx=20, ipady=10, pady=10)
+        btn3.pack(ipadx=30, ipady=15, pady=10)
 
 
 class EquipLoanScreen(ttk.Frame):
