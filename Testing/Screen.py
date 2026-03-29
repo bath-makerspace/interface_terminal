@@ -247,16 +247,16 @@ class StartScreen(ttk.Frame):
         # --- EXISTING BUTTONS ---
         # The buttons will naturally sit on top of the placed image
         label = ttk.Label(self, text="Welcome To The Makerspace Information Terminal",
-                          font=("Arial", 24, "bold"))
+                          font=("Arial", 40, "bold"))
         label.pack(pady=(80, 40))  # More top padding to move text off the logo center
 
         btn1 = ttk.Button(self, text="3D Printing Service",
                           command=lambda: master.switch_frame(PaymentChoiceScreen))
-        btn1.pack(ipadx=20, ipady=15, pady=10)
+        btn1.pack(ipadx=40, ipady=30, pady=10)
 
         btn2 = ttk.Button(self, text="Equipment Service",
                           command=lambda: master.switch_frame(EquipChoiceScreen))
-        btn2.pack(ipadx=20, ipady=15, pady=10)
+        btn2.pack(ipadx=40, ipady=30, pady=10)
 
 class EquipChoiceScreen(ttk.Frame):
     def __init__(self, master):
