@@ -1,18 +1,19 @@
 import tkinter as tk
 from tkinter import ttk
-from PIL import Image, ImageDraw
+from PIL import Image, ImageDraw, ImageTk, ImageEnhance
 import csv
 import sv_ttk
 import os
 import subprocess
 from Bath_Cost_Code import Calculate_Personal_Cost
 from tkinter import messagebox
-
+from datetime import datetime
+style = ttk.Style()
 
 class App(tk.Tk):
     def __init__(self):
         super().__init__()
-        self.title("Makerspace Portal")
+        self.title("Makerspace Information Terminal")
         self.geometry("1024x600")
 
         self.kb_process = None
@@ -54,19 +55,35 @@ class App(tk.Tk):
         self.focus_set()
 
     def get_loaned_items(self):
-        """Returns a set of items that are currently marked as 'LOANED'."""
+        """Returns items currently 'LOANED' based on the 6-column format."""
         loaned_items = set()
         if os.path.exists("loans.csv"):
             with open("loans.csv", "r") as f:
                 reader = csv.reader(f)
                 for row in reader:
-                    if len(row) >= 4:
-                        user, cat, item, status = row[0], row[1], row[2], row[3]
+                    # Indexing: 0:Time, 1:User, 2:Cat, 3:Item, 4:Status, 5:Auth
+                    if len(row) >= 5:
+                        item = row[3]
+                        status = row[4]
                         if status == "LOANED":
                             loaned_items.add(item)
                         elif status == "RETURNED":
                             loaned_items.discard(item)
         return loaned_items
+
+    def get_unpaid_debts(self):
+        """Returns rows from entries.csv where column 4 (Auth) is missing."""
+        unpaid = []
+        if os.path.exists("entries.csv"):
+            with open("entries.csv", "r") as f:
+                reader = csv.reader(f)
+                for row in reader:
+                    # Indexing: 0:Time, 1:User, 2:Cost, 3:Auth
+                    if len(row) >= 3:
+                        auth = row[3] if len(row) > 3 else ""
+                        if not auth.strip():
+                            unpaid.append(row)
+        return unpaid
 
 class PaymentInputScreen(ttk.Frame):
     canvaswidth = 400
@@ -178,46 +195,70 @@ class PaymentInputScreen(ttk.Frame):
         price = self.update_price()
         auth = self.auth_key.get().strip()
 
-        # Validation Logic
+        # Validation
         auth_valid = (auth == "" or (len(auth) == 4 and auth.isdigit()))
+        timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
 
-        if not user:
-            messagebox.showwarning("Incomplete", "Please enter a Username.")
-        elif price <= 0:
-            messagebox.showwarning("Incomplete", "Please enter a valid Print Mass.")
-        elif not self.signed:
-            messagebox.showwarning("Incomplete", "Please provide a signature.")
+        if not user or price <= 0 or not self.signed:
+            messagebox.showwarning("Incomplete", "Please fill in Username, Mass, and Signature.")
         elif not auth_valid:
-            messagebox.showwarning("Invalid Auth", "Auth Key must be empty or a 4-digit number.")
+            messagebox.showwarning("Invalid Auth", "Auth Key must be 4 digits (or leave blank).")
         else:
-            # All checks pass - Save data
-            self.image.save(f"signatures/{user}_sig.png")
+            # Save signature with unique timestamp
+            filename = f"signatures/debt_{user}_{timestamp}.png"
+            self.image.save(filename)
+
             with open("entries.csv", "a", newline="") as f:
-                csv.writer(f).writerow([user, price, auth])
+                # Adding timestamp as the first column
+                csv.writer(f).writerow([timestamp, user, price, auth])
 
             messagebox.showinfo("Success", "Debt logged successfully!")
             self.master.switch_frame(StartScreen)
 
+
 class StartScreen(ttk.Frame):
     def __init__(self, master):
         super().__init__(master)
+        self.master = master
 
-        label = ttk.Label(self, text="Welcome to the Makerspace Portal", font=("Arial", 24))
-        label.pack(pady=100)
+        # --- BACKGROUND LOGO LOGIC ---
+        try:
+            # 1. Load the original image
+            original_logo = Image.open("transparent_png_logo_final.png").convert("RGBA")
 
-        # Using style="Accent.TButton" (provided by sv_ttk) for the primary action
-        # btn1 = ttk.Button(self, text="Test Signature Pad",
-        #                  style="Accent.TButton",
-        #                  command=lambda: master.switch_frame(SignatureScreen))
-        # btn1.pack(ipadx=20, ipady=10, pady=10)
+            # 2. Resize it (e.g., to 400x400 or whatever fits your 1024x600 screen)
+            logo_resized = original_logo.resize((800, 800), Image.Resampling.LANCZOS)
 
-        btn2 = ttk.Button(self, text="3D Printing services",
-                         command=lambda: master.switch_frame(PaymentChoiceScreen))
-        btn2.pack(ipadx=20, ipady=10, pady=10)
+            # 3. Adjust Opacity (0.1 is 10% opacity, 0.2 is 20%, etc.)
+            alpha = logo_resized.split()[3]
+            alpha = ImageEnhance.Brightness(alpha).enhance(0.2)
+            logo_resized.putalpha(alpha)
 
-        btn2 = ttk.Button(self, text="Equipment services",
-                         command=lambda: master.switch_frame(EquipChoiceScreen))
-        btn2.pack(ipadx=20, ipady=10, pady=10)
+            # 4. Convert to a format Tkinter understands
+            self.bg_image = ImageTk.PhotoImage(logo_resized)
+
+            # 5. Create a label to hold the image and place it in the center
+            # We use a standard tk.Label here so we can set a transparent background
+            self.bg_label = tk.Label(self, image=self.bg_image)
+            self.bg_label.place(relx=0.3, rely=0.5, anchor="center")
+
+        except FileNotFoundError:
+            print("Logo file not found, skipping background image.")
+
+        # --- EXISTING BUTTONS ---
+        # The buttons will naturally sit on top of the placed image
+        label = ttk.Label(self, text="Welcome To The Makerspace Information Terminal",
+                          font=("Arial", 32, "bold"))
+        label.pack(pady=(80, 40))  # More top padding to move text off the logo center
+
+        style.configure('Big.TButton', font=('Arial', 18, 'bold'))
+        btn1 = ttk.Button(self, text="3D Printing Service", style="Big.TButton",
+                          command=lambda: master.switch_frame(PaymentChoiceScreen))
+        btn1.pack(ipadx=40, ipady=30, pady=10)
+
+        btn2 = ttk.Button(self, text="Equipment Service", style="Big.TButton",
+                          command=lambda: master.switch_frame(EquipChoiceScreen))
+        btn2.pack(ipadx=40, ipady=30, pady=10)
 
 class EquipChoiceScreen(ttk.Frame):
     def __init__(self, master):
@@ -260,7 +301,7 @@ class PaymentChoiceScreen(ttk.Frame):
 
 class EquipLoanScreen(ttk.Frame):
     canvaswidth = 350
-    canvasheight = 200
+    canvasheight = 180  # Slightly shorter to accommodate the extra entry box
 
     def __init__(self, master):
         super().__init__(master)
@@ -269,15 +310,15 @@ class EquipLoanScreen(ttk.Frame):
         self.current_category = None
 
         self.equipment_data = {
-            "Power Tools": ["Cordless Drill", "Jigsaw", "Orbital Sander", "Heat Gun", "Router", "Circular Saw"],
-            "Hand Tools": ["Screwdriver Set", "Socket Wrench", "Chisel Set", "Hand Saw", "Rubber Mallet"],
+            "Power Tools": ["Cordless Drill", "Jigsaw", "Orbital Sander", "Heat Gun", "Router"],
+            "Hand Tools": ["Screwdriver Set", "Socket Wrench", "Chisel Set", "Hand Saw"],
             "Electronics": ["Multimeter", "Soldering Iron", "Oscilloscope", "Power Supply"],
             "Miscellaneous": ["Safety Goggles", "Measuring Tape", "Spirit Level", "Clamps"]
         }
 
         self.bind("<Button-1>", lambda e: self.master.close_keyboard())
 
-        # 1. TOP TITLE - Reduced padding from 20 to 10
+        # 1. TOP TITLE
         ttk.Label(self, text="Equipment Loan Portal", font=("Arial", 20, "bold")).pack(pady=10)
 
         # 2. MAIN CONTENT AREA
@@ -302,35 +343,38 @@ class EquipLoanScreen(ttk.Frame):
         list_container = ttk.Frame(left_col)
         list_container.pack(fill="both", expand=True)
 
-        # REDUCED HEIGHT: Changed from 6 to 4 to save vertical space
         self.item_listbox = tk.Listbox(
             list_container,
             font=("Arial", 16),
             height=4,
-            activestyle='none',
             exportselection=False,
             selectbackground="#007fff"
         )
         self.item_listbox.pack(side="left", fill="both", expand=True)
 
-        scrollbar_style = ttk.Style()
-        scrollbar_style.configure("Vertical.TScrollbar", arrowsize=25)
-
-        self.scrollbar = ttk.Scrollbar(list_container, orient="vertical", command=self.item_listbox.yview,
-                                       style="Vertical.TScrollbar")
+        self.scrollbar = ttk.Scrollbar(list_container, orient="vertical", command=self.item_listbox.yview)
         self.scrollbar.pack(side="right", fill="y")
         self.item_listbox.config(yscrollcommand=self.scrollbar.set)
 
-        # --- RIGHT COLUMN (Identity Area) ---
+        # --- RIGHT COLUMN (Identity & Auth) ---
         right_col = ttk.Frame(content_container)
         right_col.pack(side="left", fill="both", expand=True, padx=20)
 
+        # Username
         ttk.Label(right_col, text="Username", font=("Arial", 11)).pack(anchor="w")
         self.username = ttk.Entry(right_col, font=("Arial", 14))
         self.username.pack(fill="x", pady=(0, 10))
         self.username.bind("<Button-1>", lambda e: self.master.open_keyboard(mode="full"))
         self.username.bind("<Return>", lambda e: self.master.close_keyboard())
 
+        # Auth Key
+        ttk.Label(right_col, text="Auth Key (Committee Only)", font=("Arial", 11)).pack(anchor="w")
+        self.auth_key = ttk.Entry(right_col, font=("Arial", 14))
+        self.auth_key.pack(fill="x", pady=(0, 10))
+        self.auth_key.bind("<Button-1>", lambda e: self.master.open_keyboard(mode="numeric"))
+        self.auth_key.bind("<Return>", lambda e: self.master.close_keyboard())
+
+        # Signature
         ttk.Label(right_col, text="Signature", font=("Arial", 11)).pack(anchor="w")
         self.canvas = tk.Canvas(right_col, bg="white", width=self.canvaswidth, height=self.canvasheight,
                                 relief="ridge", bd=2, highlightthickness=0)
@@ -342,35 +386,29 @@ class EquipLoanScreen(ttk.Frame):
         self.canvas.bind("<B1-Motion>", self.paint)
         self.canvas.bind("<ButtonRelease-1>", self.reset_coords)
 
-        ttk.Button(right_col, text="Clear Signature", command=self.clear).pack(pady=5)
+        ttk.Button(right_col, text="Clear Signature", command=self.clear).pack(pady=2)
 
-        # 3. BOTTOM BUTTON BAR - Adjusted padding for breathing room
+        # 3. BOTTOM BUTTON BAR
         btn_frame = ttk.Frame(self)
         btn_frame.pack(side="bottom", pady=20)
 
-        ttk.Button(btn_frame, text="Confirm", style="Accent.TButton",
+        ttk.Button(btn_frame, text="Confirm Loan", style="Accent.TButton",
                    command=self.handle_save).pack(side="left", padx=20, ipadx=20, ipady=10)
 
         ttk.Button(btn_frame, text="Cancel",
                    command=lambda: self.master.switch_frame(StartScreen)).pack(side="left", padx=20, ipadx=20, ipady=10)
 
-    # (Methods: update_category, paint, reset_coords, clear, and handle_save stay the same)
-
     def update_category(self, category):
         self.current_category = category
         self.item_listbox.delete(0, tk.END)
-
-        # Get the current list of what is ALREADY out
         currently_loaned = self.master.get_loaned_items()
 
         for item in self.equipment_data[category]:
-            # ONLY add to the list if it is NOT currently loaned out
             if item not in currently_loaned:
                 self.item_listbox.insert(tk.END, f"  {item}")
 
         if self.item_listbox.size() == 0:
             self.item_listbox.insert(tk.END, "  No items available")
-
         self.master.close_keyboard()
 
     def paint(self, event):
@@ -392,19 +430,26 @@ class EquipLoanScreen(ttk.Frame):
 
     def handle_save(self):
         user = self.username.get().strip()
+        auth = self.auth_key.get().strip()
         selection = self.item_listbox.curselection()
         item = self.item_listbox.get(selection[0]).strip() if selection else None
 
-        if not user or not item or not self.signed:
-            messagebox.showwarning("Incomplete", "Please ensure Username, Item, and Signature are provided.")
+        auth_valid = (len(auth) == 4 and auth.isdigit())
+        timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+
+        if not user or not item or not self.signed or not auth_valid:
+            messagebox.showwarning("Incomplete", "Username, Item, Signature, and 4-Digit Auth are REQUIRED.")
         else:
-            if not os.path.exists("signatures"): os.makedirs("signatures")
-            self.image.save(f"signatures/loan_{user}.png")
+            # Save signature with unique timestamp
+            filename = f"signatures/loan_{user}_{timestamp}.png"
+            self.image.save(filename)
+
             with open("loans.csv", "a", newline="") as f:
-                csv.writer(f).writerow([user, self.current_category, item, "LOANED"])
+                # Logging: Time, User, Category, Item, Status, Auth
+                csv.writer(f).writerow([timestamp, user, self.current_category, item, "LOANED", auth])
+
             messagebox.showinfo("Success", f"{item} loaned to {user}!")
             self.master.switch_frame(StartScreen)
-
 
 class EquipReturnScreen(ttk.Frame):
     def __init__(self, master):
@@ -492,27 +537,113 @@ class EquipReturnScreen(ttk.Frame):
     def handle_save(self):
         user = self.username.get().strip()
         auth = self.auth_key.get().strip()
-
-        # Get item selection
         selection = self.item_listbox.curselection()
         item = self.item_listbox.get(selection[0]).strip() if selection else None
 
-        # Logic: Auth must be empty OR exactly 4 digits
-        auth_valid = (auth == "" or (len(auth) == 4 and auth.isdigit()))
+        auth_valid = (len(auth) == 4 and auth.isdigit())
+        timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
 
-        if not user:
-            messagebox.showwarning("Incomplete", "Please enter your Username.")
-        elif not item or "No items" in item:
-            messagebox.showwarning("Incomplete", "Please select an item to return.")
-        elif not auth_valid:
-            messagebox.showwarning("Invalid Auth", "Auth Key must be empty or 4 digits.")
+        if not user or not item or not auth_valid:
+            messagebox.showwarning("Incomplete", "Username, Selection, and 4-Digit Auth are REQUIRED.")
         else:
-            # Append to loans.csv with RETURNED status
             with open("loans.csv", "a", newline="") as f:
-                csv.writer(f).writerow([user, "N/A", item, "RETURNED", auth])
+                # Logging the return timestamp
+                csv.writer(f).writerow([timestamp, user, "N/A", item, "RETURNED", auth])
 
             messagebox.showinfo("Success", f"Item '{item}' returned successfully!")
             self.master.switch_frame(StartScreen)
+
+
+class PaymentUpdateScreen(ttk.Frame):
+    def __init__(self, master):
+        super().__init__(master)
+        self.master = master
+        self.unpaid_list = self.master.get_unpaid_debts()
+
+        self.bind("<Button-1>", lambda e: self.master.close_keyboard())
+
+        ttk.Label(self, text="Clear Outstanding Debt", font=("Arial", 20, "bold")).pack(pady=15)
+
+        content_container = ttk.Frame(self)
+        content_container.pack(fill="both", expand=True, padx=40)
+
+        # --- LEFT COLUMN ---
+        left_col = ttk.Frame(content_container)
+        left_col.pack(side="left", fill="both", expand=True, padx=20)
+
+        ttk.Label(left_col, text="Select Record", font=("Arial", 12, "bold")).pack(pady=5)
+
+        list_container = ttk.Frame(left_col)
+        list_container.pack(fill="both", expand=True, pady=10)
+
+        self.debt_listbox = tk.Listbox(list_container, font=("Arial", 16), height=6, exportselection=False)
+        self.debt_listbox.pack(side="left", fill="both", expand=True)
+
+        if not self.unpaid_list:
+            self.debt_listbox.insert(tk.END, "  No unpaid debts found")
+            self.debt_listbox.config(state="disabled")
+        else:
+            for row in self.unpaid_list:
+                # Show Date, User, and Cost in the list
+                date_short = row[0][:10]  # Just the YYYY-MM-DD part
+                self.debt_listbox.insert(tk.END, f"  {date_short} | {row[1]} - £{float(row[2]):.2f}")
+
+        scrollbar = ttk.Scrollbar(list_container, orient="vertical", command=self.debt_listbox.yview)
+        scrollbar.pack(side="right", fill="y")
+        self.debt_listbox.config(yscrollcommand=scrollbar.set)
+
+        # --- RIGHT COLUMN ---
+        right_col = ttk.Frame(content_container)
+        right_col.pack(side="left", fill="both", expand=True, padx=20)
+
+        ttk.Label(right_col, text="Verification", font=("Arial", 12, "bold")).pack(pady=10)
+        ttk.Label(right_col, text="4-Digit Auth Key", font=("Arial", 11)).pack(anchor="w")
+
+        self.auth_key = ttk.Entry(right_col, font=("Arial", 14))
+        self.auth_key.pack(fill="x", pady=10)
+        self.auth_key.bind("<Button-1>", lambda e: self.master.open_keyboard(mode="numeric"))
+        self.auth_key.bind("<Return>", lambda e: self.master.close_keyboard())
+
+        # 3. BOTTOM BUTTONS
+        btn_frame = ttk.Frame(self)
+        btn_frame.pack(side="bottom", pady=40)
+
+        ttk.Button(btn_frame, text="Mark as PAID", style="Accent.TButton",
+                   command=self.handle_save).pack(side="left", padx=20, ipadx=20, ipady=10)
+        ttk.Button(btn_frame, text="Cancel",
+                   command=lambda: self.master.switch_frame(StartScreen)).pack(side="left", padx=20, ipadx=20, ipady=10)
+
+    def handle_save(self):
+        auth = self.auth_key.get().strip()
+        selection = self.debt_listbox.curselection()
+
+        if not selection or not (len(auth) == 4 and auth.isdigit()):
+            messagebox.showwarning("Error", "Select a record and enter a 4-digit Auth Key.")
+            return
+
+        selected_row_data = self.unpaid_list[selection[0]]
+        all_rows = []
+        updated = False
+
+        # Read and find the matching row using the unique timestamp + user + cost
+        with open("entries.csv", "r") as f:
+            reader = csv.reader(f)
+            for row in reader:
+                if not updated and row == selected_row_data:
+                    # Column 0: Time, 1: User, 2: Cost, 3: Auth
+                    if len(row) < 4:
+                        row.append(auth)
+                    else:
+                        row[3] = auth
+                    updated = True
+                all_rows.append(row)
+
+        with open("entries.csv", "w", newline="") as f:
+            writer = csv.writer(f)
+            writer.writerows(all_rows)
+
+        messagebox.showinfo("Success", "Record updated.")
+        self.master.switch_frame(StartScreen)
 
 if __name__ == "__main__":
     app = App()
