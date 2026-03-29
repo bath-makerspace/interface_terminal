@@ -221,50 +221,84 @@ class StartScreen(ttk.Frame):
         super().__init__(master)
         self.master = master
 
-        # 1. Create a Canvas that fills the whole frame
-        # We set highlightthickness=0 so there is no border
+        # 1. Canvas for Logo and Transparent Title
         self.canvas = tk.Canvas(self, highlightthickness=0, bd=0)
         self.canvas.pack(fill="both", expand=True)
 
-        # 2. Add the Logo to the Canvas
+        # 2. Add the Logo
         try:
-            # We process the logo here once
             original_logo = Image.open("transparent_png_logo_final.png").convert("RGBA")
             logo_resized = original_logo.resize((600, 600), Image.Resampling.LANCZOS)
-
-            # Opacity logic (0.1 for 10% visibility)
             alpha = logo_resized.split()[3]
             alpha = ImageEnhance.Brightness(alpha).enhance(0.1)
             logo_resized.putalpha(alpha)
-
             self.bg_image = ImageTk.PhotoImage(logo_resized, master=self.master)
-
-            # Place logo on canvas (relx=0.2, rely=0.5 as per your original)
-            # 1024 * 0.2 = 205, 600 * 0.5 = 300
             self.canvas.create_image(205, 300, image=self.bg_image, anchor="center")
         except FileNotFoundError:
             print("Logo file not found.")
 
-        # 3. Add the TRANSPARENT Title Text to the Canvas
-        # Because it's drawn on the canvas, it has no background box!
+        # 3. Transparent Title
         self.canvas.create_text(
-            512, 80,  # Centered horizontally (1024/2), 80 pixels down
+            512, 80,
             text="Welcome To The Makerspace Information Terminal",
             font=("Arial", 28, "bold"),
-            fill="black",  # Or "white" if you switch to dark mode
+            fill="black",
             justify="center"
         )
 
-        # 4. Add the Buttons
-        # Since buttons are complex, we "embed" them into the canvas
+        # 4. Main Service Buttons
         btn1 = ttk.Button(self, text="3D Printing Service", style="Big.TButton",
                           command=lambda: master.switch_frame(PaymentChoiceScreen))
         btn2 = ttk.Button(self, text="Equipment Service", style="Big.TButton",
                           command=lambda: master.switch_frame(EquipChoiceScreen))
 
-        # We create "windows" on the canvas to hold the buttons
         self.canvas.create_window(512, 230, window=btn1, width=400, height=120)
         self.canvas.create_window(512, 400, window=btn2, width=400, height=120)
+
+        # 5. ADMIN BUTTON (Bottom Right)
+        # We use a smaller style so it doesn't distract from the main UI
+        admin_btn = ttk.Button(self, text="Admin", command=self.open_admin_popup)
+        admin_btn.place(relx=0.98, rely=0.96, anchor="se")
+
+    def open_admin_popup(self):
+        """Opens a small popup to enter the exit code."""
+        # Create a new top-level window
+        popup = tk.Toplevel(self)
+        popup.title("Admin Exit")
+        popup.geometry("300x200")
+
+        # Center the popup on the screen
+        popup.transient(self)  # Keep it on top of main window
+        popup.grab_set()  # Block interaction with main window
+
+        ttk.Label(popup, text="Enter Auth Code:", font=("Arial", 12)).pack(pady=20)
+
+        code_entry = ttk.Entry(popup, font=("Arial", 16), show="*")  # Mask the code
+        code_entry.pack(pady=5, padx=20)
+
+        # Trigger the numeric keyboard for the popup
+        code_entry.bind("<Button-1>", lambda e: self.master.open_keyboard(mode="numeric"))
+        code_entry.focus_set()
+
+        def check_code(event=None):
+            # For now, let's use '1234' as the exit code
+            secret_code = "1234"
+            if code_entry.get() == secret_code:
+                self.master.close_keyboard()
+                self.master.destroy()  # Fully closes the program
+            else:
+                messagebox.showerror("Error", "Invalid Admin Code")
+                code_entry.delete(0, tk.END)
+
+        # Buttons inside the popup
+        btn_frame = ttk.Frame(popup)
+        btn_frame.pack(pady=20)
+
+        ttk.Button(btn_frame, text="Exit Program", command=check_code).pack(side="left", padx=5)
+        ttk.Button(btn_frame, text="Cancel", command=popup.destroy).pack(side="left", padx=5)
+
+        # Also allow hitting 'Enter' to confirm
+        code_entry.bind("<Return>", check_code)
 
 class EquipChoiceScreen(ttk.Frame):
     def __init__(self, master):
