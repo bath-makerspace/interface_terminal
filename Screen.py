@@ -318,12 +318,12 @@ class EquipLoanScreen(ttk.Frame):
         self.signed = False
         self.current_category = None
 
-        self.equipment_data = {
-            "Power Tools": ["Cordless Drill", "Jigsaw", "Orbital Sander", "Heat Gun", "Router"],
-            "Hand Tools": ["Screwdriver Set", "Socket Wrench", "Chisel Set", "Hand Saw"],
-            "Electronics": ["Multimeter", "Soldering Iron", "Oscilloscope", "Power Supply"],
-            "Miscellaneous": ["Safety Goggles", "Measuring Tape", "Spirit Level", "Clamps"]
-        }
+        self.equipment_data = [
+            "IT_Inventory",
+            "Mechanical_tools",
+            "Electronics_Equipment",
+            "Laser_Printer_Equip",
+        ]
 
         self.bind("<Button-1>", lambda e: self.master.close_keyboard())
 
@@ -342,9 +342,9 @@ class EquipLoanScreen(ttk.Frame):
 
         grid_frame = ttk.Frame(left_col)
         grid_frame.pack()
-        for i, cat in enumerate(self.equipment_data.keys()):
-            btn = ttk.Button(grid_frame, text=cat, width=15,
-                             command=lambda c=cat: self.update_category(c))
+        for i,category in enumerate(self.equipment_data):
+            btn = ttk.Button(grid_frame, text=category, width=20,
+                             command=lambda c=category: self.update_category(c))
             btn.grid(row=i // 2, column=i % 2, padx=5, pady=5, ipady=5)
 
         ttk.Label(left_col, text="2. Tap to Select Item", font=("Arial", 12, "bold")).pack(pady=(15, 5))
@@ -410,12 +410,9 @@ class EquipLoanScreen(ttk.Frame):
     def update_category(self, category):
         self.current_category = category
         self.item_listbox.delete(0, tk.END)
-        currently_loaned = self.master.get_loaned_items()
-
-        for item in self.equipment_data[category]:
-            if item not in currently_loaned:
-                self.item_listbox.insert(tk.END, f"  {item}")
-
+        for item in sheet.get_available_equipment_inventory(category):
+            self.item_listbox.insert(tk.END, f"  {item["Item Name"]}")
+        
         if self.item_listbox.size() == 0:
             self.item_listbox.insert(tk.END, "  No items available")
         self.master.close_keyboard()
@@ -444,19 +441,18 @@ class EquipLoanScreen(ttk.Frame):
         item = self.item_listbox.get(selection[0]).strip() if selection else None
 
         auth_valid = (len(auth) == 4 and auth.isdigit())
-        timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+        
+        if auth_valid and auth != "":
+            auth_code_list = sheet.get_possible_auth_code()
+            if auth in auth_code_list:
+                auth_valid = True
+            else:
+                auth_valid = False
 
-        if not user or not item or not self.signed or not auth_valid:
+        if not user or not item or not auth_valid:
             messagebox.showwarning("Incomplete", "Username, Item, Signature, and 4-Digit Auth are REQUIRED.")
         else:
-            # Save signature with unique timestamp
-            filename = f"signatures/loan_{user}_{timestamp}.png"
-            self.image.save(filename)
-
-            with open("loans.csv", "a", newline="") as f:
-                # Logging: Time, User, Category, Item, Status, Auth
-                csv.writer(f).writerow([timestamp, user, self.current_category, item, "LOANED", auth])
-
+            sheet.add_loan_out_entry(Bath_ID=user, Category=self.current_category, Item=item, AuthCode=auth)
             messagebox.showinfo("Success", f"{item} loaned to {user}!")
             self.master.switch_frame(StartScreen)
 
