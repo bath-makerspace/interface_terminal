@@ -51,6 +51,7 @@ class App(tk.Tk):
 
         # This removes the blinking cursor from any text box
         self.focus_set()
+        self.update_price()
 
 
 from tkinter import messagebox  # Add this to your imports at the top
@@ -94,7 +95,7 @@ class PaymentInputScreen(ttk.Frame):
         self.print_mass.bind("<Return>", self.handle_enter_key)
 
         ttk.Label(left_col, text="Authentication Key", font=("Arial", 12)).pack(anchor="w")
-        ttk.Label(left_col, text="(Only fill if paying now - 4 digits)", font=("Arial", 10, "italic")).pack(anchor="w")
+        ttk.Label(left_col, text="(Committee only - for if paying now)", font=("Arial", 10, "italic")).pack(anchor="w")
         self.auth_key = ttk.Entry(left_col, font=("Arial", 14))
         self.auth_key.pack(fill="x", pady=(0, 10))
         self.auth_key.bind("<Button-1>", lambda e: self.master.open_keyboard(mode="numeric"))
@@ -147,7 +148,6 @@ class PaymentInputScreen(ttk.Frame):
         self.signed = False  # Reset signature status
 
     def handle_enter_key(self, event):
-        self.update_price()
         self.master.close_keyboard()
 
     def update_price(self):
