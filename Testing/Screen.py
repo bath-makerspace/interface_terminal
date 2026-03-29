@@ -10,6 +10,12 @@ from tkinter import messagebox
 from datetime import datetime
 
 class App(tk.Tk):
+    # Apply the theme to the specific app instance
+    sv_ttk.set_theme("light")
+    # A massive font for primary actions
+    style.configure('Big.TButton', font=('Arial', 18, 'bold'))
+    # A medium font for secondary actions
+    style.configure('Medium.TButton', font=('Arial', 12))
     def __init__(self):
         super().__init__()
         self.title("Makerspace Information Terminal")
@@ -250,11 +256,11 @@ class StartScreen(ttk.Frame):
                           font=("Arial", 28, "bold"))
         label.pack(pady=(80, 40))  # More top padding to move text off the logo center
 
-        btn1 = ttk.Button(self, text="3D Printing Service",
+        btn1 = ttk.Button(self, text="3D Printing Service", style="Big.TButton",
                           command=lambda: master.switch_frame(PaymentChoiceScreen))
         btn1.pack(ipadx=40, ipady=30, pady=10)
 
-        btn2 = ttk.Button(self, text="Equipment Service",
+        btn2 = ttk.Button(self, text="Equipment Service", style="Big.TButton",
                           command=lambda: master.switch_frame(EquipChoiceScreen))
         btn2.pack(ipadx=40, ipady=30, pady=10)
 
@@ -645,6 +651,4 @@ class PaymentUpdateScreen(ttk.Frame):
 
 if __name__ == "__main__":
     app = App()
-    # Apply the theme to the specific app instance
-    sv_ttk.set_theme("light")
     app.mainloop()
