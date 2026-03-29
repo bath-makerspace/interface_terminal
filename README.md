@@ -16,4 +16,5 @@ This is the codebase use for the makerspace's TouchScreen User Interface
 # Launch Instruction
 ``` bash
 pip install -r requirements.txt
+python Screen.py
 ```
