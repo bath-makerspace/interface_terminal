@@ -185,7 +185,7 @@ class StartScreen(ttk.Frame):
         # btn1.pack(ipadx=20, ipady=10, pady=10)
 
         btn2 = ttk.Button(self, text="Log 3D Print Debt",
-                         command=lambda: master.switch_frame(PaymentInputScreen))
+                         command=lambda: master.switch_frame(PaymentChoiceScreen))
         btn2.pack(ipadx=20, ipady=10, pady=10)
 
         btn2 = ttk.Button(self, text="Equipment",
