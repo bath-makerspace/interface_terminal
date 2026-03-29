@@ -5,9 +5,11 @@ import csv
 import sv_ttk
 import os
 import subprocess
-from Bath_Cost_Code import Calculate_Personal_Cost
 from tkinter import messagebox
 from datetime import datetime
+
+from Bath_Cost_Code import Calculate_Personal_Cost
+from Sheet_API import sheet_API
 
 class App(tk.Tk):
 
@@ -19,6 +21,8 @@ class App(tk.Tk):
         self.kb_process = None
         self.current_frame = None
         self.switch_frame(StartScreen)
+
+        
 
     def switch_frame(self, frame_class):
         self.close_keyboard()
@@ -93,6 +97,7 @@ class PaymentInputScreen(ttk.Frame):
         super().__init__(master)
         self.master = master
         self.signed = False  # Track if the user has signed
+        self.sheet = sheet_API()
 
         # Ensure the signatures folder exists so we don't crash on save
         if not os.path.exists("signatures"):
@@ -199,6 +204,13 @@ class PaymentInputScreen(ttk.Frame):
         auth_valid = (auth == "" or (len(auth) == 4 and auth.isdigit()))
         timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
 
+        if auth_valid and auth != "":
+            auth_code_list = self.sheet.get_possible_auth_code()
+            if auth in auth_code_list:
+                auth_valid = True
+            else:
+                auth_valid = False
+
         if not user or price <= 0 or not self.signed:
             messagebox.showwarning("Incomplete", "Please fill in Username, Mass, and Signature.")
         elif not auth_valid:
@@ -208,9 +220,7 @@ class PaymentInputScreen(ttk.Frame):
             filename = f"signatures/debt_{user}_{timestamp}.png"
             self.image.save(filename)
 
-            with open("entries.csv", "a", newline="") as f:
-                # Adding timestamp as the first column
-                csv.writer(f).writerow([timestamp, user, price, auth])
+            self.sheet.add_personal_print_credit(Bath_ID=user, Weight=self.print_mass.get(), AuthCode=auth, Signature_path=filename)
 
             messagebox.showinfo("Success", "Debt logged successfully!")
             self.master.switch_frame(StartScreen)
