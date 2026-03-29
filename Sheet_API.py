@@ -59,7 +59,7 @@ class sheet_API:
     def __upload_image_to_drive(self, image_path:str) -> str:
         file_metadata = {'name': os.path.basename(image_path), 'mimeType': f'image/{image_file_format}', 'parents': [FOLDER_ID]}
         media = MediaFileUpload(image_path, mimetype=f'image/{image_file_format}', resumable=True)
-        
+
         file = self.drive_service.files().create(body=file_metadata, media_body=media, fields='id').execute()
 
         file_id = file.get('id')
@@ -96,7 +96,7 @@ class sheet_API:
         target_range = f"{start_col}{row_values + 1}:{end_col}{row_values + 1}"
 
         sheet.update(range_name=target_range, values=[new_row_data],value_input_option='USER_ENTERED')
-            
+        os.remove(Signature_path) # Remove the image from local storage after uploading to Google Drive   
         print(f"Successfully added row to {table_details['sheet_name']} at {target_range}")
 
         if AuthCode == "'" or AuthCode is None:
