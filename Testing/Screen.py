@@ -8,15 +8,8 @@ import subprocess
 from Bath_Cost_Code import Calculate_Personal_Cost
 from tkinter import messagebox
 from datetime import datetime
-style = ttk.Style()
 
 class App(tk.Tk):
-    # Apply the theme to the specific app instance
-    sv_ttk.set_theme("light")
-    # A massive font for primary actions
-    style.configure('Big.TButton', font=('Arial', 18))
-    # A medium font for secondary actions
-    style.configure('Medium.TButton', font=('Arial', 12))
     def __init__(self):
         super().__init__()
         self.title("Makerspace Information Terminal")
@@ -648,5 +641,7 @@ class PaymentUpdateScreen(ttk.Frame):
         self.master.switch_frame(StartScreen)
 
 if __name__ == "__main__":
+    # Apply the theme to the specific app instance
+    sv_ttk.set_theme("light")
     app = App()
     app.mainloop()
