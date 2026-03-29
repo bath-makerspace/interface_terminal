@@ -3,7 +3,8 @@ from tkinter import ttk
 from PIL import Image, ImageDraw
 import csv
 import sv_ttk
-import subprocess  # Required for launching the keyboard
+import os
+import subprocess
 from Bath_Cost_Code import Calculate_Personal_Cost
 
 
@@ -13,52 +14,41 @@ class App(tk.Tk):
         self.title("Makerspace Debt Portal")
         self.geometry("1024x600")
 
-        # Track the keyboard process globally so we can kill it from any screen
         self.kb_process = None
-
         self.current_frame = None
         self.switch_frame(StartScreen)
 
     def switch_frame(self, frame_class):
-        # Kill keyboard if it's open when we switch screens
+        """Switches screens and ensures the keyboard is closed."""
         self.close_keyboard()
-
         new_frame = frame_class(self)
         if self.current_frame is not None:
             self.current_frame.destroy()
         self.current_frame = new_frame
         self.current_frame.pack(fill="both", expand=True)
 
-    def open_keyboard(self, event=None, mode="full"):
-        """Launches wvkbd with correct flags for your version."""
-        if platform.system() == "Linux":
-            env = os.environ.copy()
-            # Clean up any old instance first
-            self.close_keyboard()
+    def open_keyboard(self, mode="full"):
+        """Launches the Wayland-native keyboard (wvkbd)."""
+        self.close_keyboard()  # Prevent stacking multiple keyboards
+        env = os.environ.copy()
 
-            try:
-                if mode == "numeric":
-                    # Use '-l dialer' or '-l numeric' for the number pad
-                    # Adjust -L (height) to 250 pixels so it fits your 600px screen nicely
-                    args = ["wvkbd-mobintl", "-L", "250", "-l", "dialer"]
-                else:
-                    # Standard alphabetical layout
-                    args = ["wvkbd-mobintl", "-L", "250"]
-
-                self.kb_process = subprocess.Popen(args, env=env)
-            except FileNotFoundError:
-                print("wvkbd not found. Please run: sudo apt install wvkbd")
+        # -L 250 sets the landscape height to 250px (leaving room for your app)
+        if mode == "numeric":
+            args = ["wvkbd-mobintl", "-L", "250", "-l", "dialer"]
         else:
-            print(f"Windows: Keyboard trigger captured for {mode} mode.")
+            args = ["wvkbd-mobintl", "-L", "250"]
+
+        try:
+            self.kb_process = subprocess.Popen(args, env=env)
+        except FileNotFoundError:
+            print("Keyboard not found. Run: sudo apt install wvkbd")
 
     def close_keyboard(self):
-        """Kills the keyboard process on Linux."""
-        if platform.system() == "Linux":
-            # pkill is the most reliable way to hide Wayland keyboards
-            subprocess.run(["pkill", "wvkbd-mobintl"], stderr=subprocess.DEVNULL)
-            if self.kb_process:
-                self.kb_process.terminate()
-                self.kb_process = None
+        """Forcefully closes any open wvkbd instances."""
+        subprocess.run(["pkill", "wvkbd-mobintl"], stderr=subprocess.DEVNULL)
+        if self.kb_process:
+            self.kb_process.terminate()
+            self.kb_process = None
 
 class StartScreen(ttk.Frame):
     def __init__(self, master):
@@ -100,66 +90,61 @@ class EquipChoiceScreen(ttk.Frame):
                          command=lambda: master.switch_frame(StartScreen))
         btn3.pack(ipadx=20, ipady=10, pady=10)
 
-
 class PaymentInputScreen(ttk.Frame):
     def __init__(self, master):
         super().__init__(master)
         self.master = master
 
-        ttk.Label(self, text="Add to tab", font=("Arial", 16)).pack(pady=30)
+        ttk.Label(self, text="Add to Tab", font=("Arial", 18, "bold")).pack(pady=20)
 
-        # Username Entry
-        ttk.Label(self, text="Username", font=("Arial", 12)).pack(pady=5)
-        self.username = ttk.Entry(self, font=("Arial", 12), width=20)
-        self.username.pack(pady=15)
-        # Bind tap to open keyboard
+        # Username Field
+        ttk.Label(self, text="Username", font=("Arial", 12)).pack()
+        self.username = ttk.Entry(self, font=("Arial", 14), width=25)
+        self.username.pack(pady=10)
         self.username.bind("<Button-1>", lambda e: self.master.open_keyboard(mode="full"))
 
-        # Print Mass Entry
-        ttk.Label(self, text="Print mass (g)", font=("Arial", 12)).pack(pady=5)
-        self.print_mass = ttk.Entry(self, font=("Arial", 12), width=10)
-        self.print_mass.pack(pady=15)
-        # Bind tap to open keyboard
+        # Mass Field
+        ttk.Label(self, text="Print Mass (g)", font=("Arial", 12)).pack()
+        self.print_mass = ttk.Entry(self, font=("Arial", 14), width=15)
+        self.print_mass.pack(pady=10)
         self.print_mass.bind("<Button-1>", lambda e: self.master.open_keyboard(mode="numeric"))
 
-        # Result display
-        self.result_label = ttk.Label(self, text="Total Cost: £0.00", font=("Arial", 14, "bold"))
-        self.result_label.pack(pady=10)
+        # Live Cost Display
+        self.cost_display = ttk.Label(self, text="Cost: £0.00", font=("Arial", 16, "bold"))
+        self.cost_display.pack(pady=20)
 
         btn_frame = ttk.Frame(self)
         btn_frame.pack(pady=20)
 
-        # FIXED: Using a local method instead of calling the function directly
         ttk.Button(btn_frame, text="Calculate Cost", style="Accent.TButton",
-                   command=self.update_display).pack(side="left", padx=10)
+                  command=self.update_price).pack(side="left", padx=10)
 
-        ttk.Button(btn_frame, text="Save to CSV & Close", style="Accent.TButton",
-                   command=self.handle_save).pack(side="left", padx=10)
+        ttk.Button(btn_frame, text="Save & Exit", style="Accent.TButton",
+                  command=self.handle_save).pack(side="left", padx=10)
 
         ttk.Button(btn_frame, text="Cancel",
-                   command=lambda: master.switch_frame(StartScreen)).pack(side="left", padx=10)
+                  command=lambda: master.switch_frame(StartScreen)).pack(side="left", padx=10)
 
-    def update_display(self):
-        """Gets value from entry and updates the UI label."""
-        weight_text = self.print_mass.get()
-        if weight_text.strip():
-            # Pass the text string to your math function
-            cost = Calculate_Personal_Cost(weight_text)
-            self.result_label.config(text=f"Total Cost: £{cost:.2f}")
-            return cost
-        return 0.0
+    def update_price(self):
+        """Safely gets text from entry and updates the display."""
+        raw_val = self.print_mass.get()
+        if raw_val:
+            try:
+                # We pass the string to your function; ensure your function
+                # inside Bath_Cost_Code uses float(Weight) or int(Weight)
+                price = Calculate_Personal_Cost(raw_val)
+                self.cost_display.config(text=f"Cost: £{float(price):.2f}")
+                return price
+            except ValueError:
+                self.cost_display.config(text="Invalid Mass!")
+        return 0
 
     def handle_save(self):
         user = self.username.get()
-        cost = self.update_display()  # Ensure we have the latest cost
-
-        if user and cost > 0:
+        price = self.update_price()
+        if user and price:
             with open("entries.csv", "a", newline="") as f:
-                csv.writer(f).writerow([user, cost])
-
-            self.username.delete(0, tk.END)
-            self.print_mass.delete(0, tk.END)
-            # Keyboard is closed automatically by switch_frame
+                csv.writer(f).writerow([user, price])
             self.master.switch_frame(StartScreen)
 
 class SignatureScreen(ttk.Frame): # Changed to ttk.Frame
