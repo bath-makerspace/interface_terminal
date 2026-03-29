@@ -218,43 +218,53 @@ class PaymentInputScreen(ttk.Frame):
 
 class StartScreen(ttk.Frame):
     def __init__(self, master):
-
         super().__init__(master)
         self.master = master
 
-        # Inside StartScreen __init__
-        try:
-            original_logo = Image.open("transparent_png_logo_final.png").convert("RGBA")
-            logo_resized = original_logo.resize((800, 800), Image.Resampling.LANCZOS)
+        # 1. Create a Canvas that fills the whole frame
+        # We set highlightthickness=0 so there is no border
+        self.canvas = tk.Canvas(self, highlightthickness=0, bd=0)
+        self.canvas.pack(fill="both", expand=True)
 
-            # Adjust opacity
+        # 2. Add the Logo to the Canvas
+        try:
+            # We process the logo here once
+            original_logo = Image.open("transparent_png_logo_final.png").convert("RGBA")
+            logo_resized = original_logo.resize((600, 600), Image.Resampling.LANCZOS)
+
+            # Opacity logic (0.1 for 10% visibility)
             alpha = logo_resized.split()[3]
             alpha = ImageEnhance.Brightness(alpha).enhance(0.1)
             logo_resized.putalpha(alpha)
 
-            # --- THE FIX IS HERE: Add 'master=self.master' ---
             self.bg_image = ImageTk.PhotoImage(logo_resized, master=self.master)
 
-            # Place the label
-            self.bg_label = tk.Label(self, image=self.bg_image)
-            self.bg_label.place(relx=0.2, rely=0.5, anchor="center")
-
+            # Place logo on canvas (relx=0.2, rely=0.5 as per your original)
+            # 1024 * 0.2 = 205, 600 * 0.5 = 300
+            self.canvas.create_image(205, 300, image=self.bg_image, anchor="center")
         except FileNotFoundError:
             print("Logo file not found.")
 
-        # --- EXISTING BUTTONS ---
-        # The buttons will naturally sit on top of the placed image
-        label = ttk.Label(self, text="Welcome To The Makerspace Information Terminal",
-                          font=("Arial", 28, "bold"))
-        label.pack(pady=(80, 40))  # More top padding to move text off the logo center
+        # 3. Add the TRANSPARENT Title Text to the Canvas
+        # Because it's drawn on the canvas, it has no background box!
+        self.canvas.create_text(
+            512, 80,  # Centered horizontally (1024/2), 80 pixels down
+            text="Welcome To The Makerspace Information Terminal",
+            font=("Arial", 28, "bold"),
+            fill="black",  # Or "white" if you switch to dark mode
+            justify="center"
+        )
 
+        # 4. Add the Buttons
+        # Since buttons are complex, we "embed" them into the canvas
         btn1 = ttk.Button(self, text="3D Printing Service", style="Big.TButton",
                           command=lambda: master.switch_frame(PaymentChoiceScreen))
-        btn1.pack(ipadx=60, ipady=45, pady=15)
-
         btn2 = ttk.Button(self, text="Equipment Service", style="Big.TButton",
                           command=lambda: master.switch_frame(EquipChoiceScreen))
-        btn2.pack(ipadx=60, ipady=45, pady=15)
+
+        # We create "windows" on the canvas to hold the buttons
+        self.canvas.create_window(512, 280, window=btn1, width=450, height=120)
+        self.canvas.create_window(512, 450, window=btn2, width=450, height=120)
 
 class EquipChoiceScreen(ttk.Frame):
     def __init__(self, master):
