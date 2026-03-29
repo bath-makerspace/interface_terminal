@@ -271,15 +271,15 @@ class EquipChoiceScreen(ttk.Frame):
 
         btn1 = ttk.Button(self, text="Loaning Equipment",
                          command=lambda: master.switch_frame(EquipLoanScreen))
-        btn1.pack(ipadx=20, ipady=10, pady=10)
+        btn1.pack(ipadx=60, ipady=45, pady=15)
 
         btn2 = ttk.Button(self, text="Returning Equipment",
                          command=lambda: master.switch_frame(EquipReturnScreen))
-        btn2.pack(ipadx=20, ipady=10, pady=10)
+        btn2.pack(ipadx=60, ipady=45, pady=15)
 
         btn3 = ttk.Button(self, text="Cancel",
                          command=lambda: master.switch_frame(StartScreen))
-        btn3.pack(ipadx=20, ipady=10, pady=10)
+        btn3.pack(ipadx=30, ipady=15, pady=10)
 
 class PaymentChoiceScreen(ttk.Frame):
     def __init__(self, master):
@@ -290,15 +290,15 @@ class PaymentChoiceScreen(ttk.Frame):
 
         btn1 = ttk.Button(self, text="Log New Print Debt",
                          command=lambda: master.switch_frame(PaymentInputScreen))
-        btn1.pack(ipadx=20, ipady=10, pady=10)
+        btn1.pack(ipadx=60, ipady=45, pady=15)
 
         btn2 = ttk.Button(self, text="Mark Debt As Paid",
                          command=lambda: master.switch_frame(PaymentUpdateScreen))
-        btn2.pack(ipadx=20, ipady=10, pady=10)
+        btn2.pack(ipadx=60, ipady=45, pady=15)
 
         btn3 = ttk.Button(self, text="Cancel",
                          command=lambda: master.switch_frame(StartScreen))
-        btn3.pack(ipadx=20, ipady=10, pady=10)
+        btn3.pack(ipadx=30, ipady=15, pady=10)
 
 
 class EquipLoanScreen(ttk.Frame):
