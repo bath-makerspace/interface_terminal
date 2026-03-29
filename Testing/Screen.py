@@ -260,8 +260,28 @@ class EquipChoiceScreen(ttk.Frame):
     def __init__(self, master):
         super().__init__(master)
 
+        # Inside StartScreen __init__
+        try:
+            original_logo = Image.open("transparent_png_logo_final.png").convert("RGBA")
+            logo_resized = original_logo.resize((800, 800), Image.Resampling.LANCZOS)
+
+            # Adjust opacity
+            alpha = logo_resized.split()[3]
+            alpha = ImageEnhance.Brightness(alpha).enhance(0.1)
+            logo_resized.putalpha(alpha)
+
+            # --- THE FIX IS HERE: Add 'master=self.master' ---
+            self.bg_image = ImageTk.PhotoImage(logo_resized, master=self.master)
+
+            # Place the label
+            self.bg_label = tk.Label(self, image=self.bg_image)
+            self.bg_label.place(relx=0.2, rely=0.5, anchor="center")
+
+        except FileNotFoundError:
+            print("Logo file not found.")
+
         label = ttk.Label(self, text="", font=("Arial", 24))
-        label.pack(pady=10)
+        label.pack(pady=20)
 
         btn1 = ttk.Button(self, text="Loaning Equipment",
                          command=lambda: master.switch_frame(EquipLoanScreen))
@@ -279,8 +299,28 @@ class PaymentChoiceScreen(ttk.Frame):
     def __init__(self, master):
         super().__init__(master)
 
+        # Inside StartScreen __init__
+        try:
+            original_logo = Image.open("transparent_png_logo_final.png").convert("RGBA")
+            logo_resized = original_logo.resize((800, 800), Image.Resampling.LANCZOS)
+
+            # Adjust opacity
+            alpha = logo_resized.split()[3]
+            alpha = ImageEnhance.Brightness(alpha).enhance(0.1)
+            logo_resized.putalpha(alpha)
+
+            # --- THE FIX IS HERE: Add 'master=self.master' ---
+            self.bg_image = ImageTk.PhotoImage(logo_resized, master=self.master)
+
+            # Place the label
+            self.bg_label = tk.Label(self, image=self.bg_image)
+            self.bg_label.place(relx=0.2, rely=0.5, anchor="center")
+
+        except FileNotFoundError:
+            print("Logo file not found.")
+
         label = ttk.Label(self, text="", font=("Arial", 24))
-        label.pack(pady=10)
+        label.pack(pady=20)
 
         btn1 = ttk.Button(self, text="Log New Print Debt",
                          command=lambda: master.switch_frame(PaymentInputScreen))
@@ -304,6 +344,26 @@ class EquipLoanScreen(ttk.Frame):
         self.master = master
         self.signed = False
         self.current_category = None
+
+        # Inside StartScreen __init__
+        try:
+            original_logo = Image.open("transparent_png_logo_final.png").convert("RGBA")
+            logo_resized = original_logo.resize((800, 800), Image.Resampling.LANCZOS)
+
+            # Adjust opacity
+            alpha = logo_resized.split()[3]
+            alpha = ImageEnhance.Brightness(alpha).enhance(0.1)
+            logo_resized.putalpha(alpha)
+
+            # --- THE FIX IS HERE: Add 'master=self.master' ---
+            self.bg_image = ImageTk.PhotoImage(logo_resized, master=self.master)
+
+            # Place the label
+            self.bg_label = tk.Label(self, image=self.bg_image)
+            self.bg_label.place(relx=0.2, rely=0.5, anchor="center")
+
+        except FileNotFoundError:
+            print("Logo file not found.")
 
         self.equipment_data = {
             "Power Tools": ["Cordless Drill", "Jigsaw", "Orbital Sander", "Heat Gun", "Router"],
@@ -452,6 +512,26 @@ class EquipReturnScreen(ttk.Frame):
         super().__init__(master)
         self.master = master
 
+        # Inside StartScreen __init__
+        try:
+            original_logo = Image.open("transparent_png_logo_final.png").convert("RGBA")
+            logo_resized = original_logo.resize((800, 800), Image.Resampling.LANCZOS)
+
+            # Adjust opacity
+            alpha = logo_resized.split()[3]
+            alpha = ImageEnhance.Brightness(alpha).enhance(0.1)
+            logo_resized.putalpha(alpha)
+
+            # --- THE FIX IS HERE: Add 'master=self.master' ---
+            self.bg_image = ImageTk.PhotoImage(logo_resized, master=self.master)
+
+            # Place the label
+            self.bg_label = tk.Label(self, image=self.bg_image)
+            self.bg_label.place(relx=0.2, rely=0.5, anchor="center")
+
+        except FileNotFoundError:
+            print("Logo file not found.")
+
         # Pull the fresh list of loaned items from the CSV
         self.loaned_items = self.master.get_loaned_items()
 
@@ -555,6 +635,26 @@ class PaymentUpdateScreen(ttk.Frame):
         super().__init__(master)
         self.master = master
         self.unpaid_list = self.master.get_unpaid_debts()
+
+        # Inside StartScreen __init__
+        try:
+            original_logo = Image.open("transparent_png_logo_final.png").convert("RGBA")
+            logo_resized = original_logo.resize((800, 800), Image.Resampling.LANCZOS)
+
+            # Adjust opacity
+            alpha = logo_resized.split()[3]
+            alpha = ImageEnhance.Brightness(alpha).enhance(0.1)
+            logo_resized.putalpha(alpha)
+
+            # --- THE FIX IS HERE: Add 'master=self.master' ---
+            self.bg_image = ImageTk.PhotoImage(logo_resized, master=self.master)
+
+            # Place the label
+            self.bg_label = tk.Label(self, image=self.bg_image)
+            self.bg_label.place(relx=0.2, rely=0.5, anchor="center")
+
+        except FileNotFoundError:
+            print("Logo file not found.")
 
         self.bind("<Button-1>", lambda e: self.master.close_keyboard())
 
