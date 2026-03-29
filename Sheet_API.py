@@ -32,7 +32,7 @@ class sheet_API:
     def __get_service(self, cred_file):
         creds = None
         if os.path.exists('token.json'):
-            creds = Credentials.from_authorized_user_file('token.json', ""https://www.googleapis.com/auth/drive.file")
+            creds = Credentials.from_authorized_user_file('token.json', "https://www.googleapis.com/auth/drive.file")
         
         if not creds or not creds.valid:
             if creds and creds.expired and creds.refresh_token:
