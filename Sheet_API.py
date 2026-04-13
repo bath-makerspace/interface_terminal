@@ -25,7 +25,6 @@ class sheet_API:
                        "https://www.googleapis.com/auth/drive"]
         self.creds = ServiceAccountCredentials.from_json_keyfile_name("cred.json", self.scopes)
         self.client = gspread.authorize(self.creds)
-        drive_creds = Credentials.from_authorized_user_file('token.json', self.scopes)
         self.drive_service = self.__get_service('credentials.json')
         self.auth_codes = self.__get_possible_online_auth_code()
     
