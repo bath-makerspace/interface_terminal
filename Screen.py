@@ -27,7 +27,7 @@ class App(tk.Tk):
         
 
     def switch_frame(self, frame_class):
-        self.close_keyboard()
+        # self.close_keyboard()
         if self.current_frame is not None:
             self.current_frame.destroy()
         self.current_frame = frame_class(self)
@@ -50,15 +50,15 @@ class App(tk.Tk):
         except FileNotFoundError:
             print("Keyboard not found.")
 
-    def close_keyboard(self, event=None):
-        """Kills keyboard and removes focus from widgets."""
-        subprocess.run(["pkill", "wvkbd-mobintl"], stderr=subprocess.DEVNULL)
-        if self.kb_process:
-            self.kb_process.terminate()
-            self.kb_process = None
-
-        # This removes the blinking cursor from any text box
-        self.focus_set()
+    # def close_keyboard(self, event=None):
+    #     """Kills keyboard and removes focus from widgets."""
+    #     subprocess.run(["pkill", "wvkbd-mobintl"], stderr=subprocess.DEVNULL)
+    #     if self.kb_process:
+    #         self.kb_process.terminate()
+    #         self.kb_process = None
+    #
+    #     # This removes the blinking cursor from any text box
+    #     self.focus_set()
 
     def get_loaned_items(self):
         """Returns items currently 'LOANED' based on the 6-column format."""
