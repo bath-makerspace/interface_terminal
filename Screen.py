@@ -383,20 +383,6 @@ class EquipLoanScreen(ttk.Frame):
         self.auth_key.bind("<Button-1>", lambda e: self.master.open_keyboard(mode="numeric"))
         self.auth_key.bind("<Return>", lambda e: self.master.close_keyboard())
 
-        # Signature
-        ttk.Label(right_col, text="Signature", font=("Arial", 11)).pack(anchor="w")
-        self.canvas = tk.Canvas(right_col, bg="white", width=self.canvaswidth, height=self.canvasheight,
-                                relief="ridge", bd=2, highlightthickness=0)
-        self.canvas.pack(pady=5)
-
-        self.image = Image.new("RGB", (self.canvaswidth, self.canvasheight), "white")
-        self.draw = ImageDraw.Draw(self.image)
-        self.last_x, self.last_y = None, None
-        self.canvas.bind("<B1-Motion>", self.paint)
-        self.canvas.bind("<ButtonRelease-1>", self.reset_coords)
-
-        ttk.Button(right_col, text="Clear Signature", command=self.clear).pack(pady=2)
-
         # 3. BOTTOM BUTTON BAR
         btn_frame = ttk.Frame(self)
         btn_frame.pack(side="bottom", pady=20)
