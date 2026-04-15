@@ -142,15 +142,19 @@ class PaymentChoiceScreen(ttk.Frame):
 
         btn1 = ttk.Button(self, text="Add 3D Print Debt",
                          command=lambda: master.switch_frame(PaymentInputScreen))
-        btn1.pack(ipadx=60, ipady=45, pady=15)
+        btn1.pack(ipadx=60, ipady=35, pady=15)
 
-        btn2 = ttk.Button(self, text="Mark Debt As Paid",
+        btn2 = ttk.Button(self, text="Add Markforged Print Debt",
+                         command=lambda: master.switch_frame(PaymentMarkforgedScreen))
+        btn2.pack(ipadx=40, ipady=35, pady=15)
+
+        btn3 = ttk.Button(self, text="Mark Debt As Paid",
                          command=lambda: master.switch_frame(PaymentUpdateScreen))
-        btn2.pack(ipadx=60, ipady=45, pady=15)
+        btn3.pack(ipadx=60, ipady=35, pady=15)
 
-        btn3 = ttk.Button(self, text="Back",
+        btn4 = ttk.Button(self, text="Back",
                          command=lambda: master.switch_frame(StartScreen))
-        btn3.pack(ipadx=30, ipady=15, pady=10)
+        btn4.pack(ipadx=30, ipady=15, pady=10)
 
 class PaymentInputScreen(ttk.Frame):
     canvaswidth = 400
