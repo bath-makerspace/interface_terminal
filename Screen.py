@@ -83,6 +83,75 @@ class App(tk.Tk):
         
         return unpaid
 
+class StartScreen(ttk.Frame):
+    def __init__(self, master):
+        super().__init__(master)
+        self.master = master
+
+        # 1. Create a Canvas that fills the whole frame
+        # We set highlightthickness=0 so there is no border
+        self.canvas = tk.Canvas(self, highlightthickness=0, bd=0)
+        self.canvas.pack(fill="both", expand=True)
+
+        # 2. Add the Logo to the Canvas
+        try:
+            # We process the logo here once
+            original_logo = Image.open("transparent_png_logo_final.png").convert("RGBA")
+            logo_resized = original_logo.resize((600, 600), Image.Resampling.LANCZOS)
+
+            # Opacity logic (0.1 for 10% visibility)
+            alpha = logo_resized.split()[3]
+            alpha = ImageEnhance.Brightness(alpha).enhance(0.1)
+            logo_resized.putalpha(alpha)
+
+            self.bg_image = ImageTk.PhotoImage(logo_resized, master=self.master)
+
+            # Place logo on canvas (relx=0.2, rely=0.5 as per your original)
+            # 1024 * 0.2 = 205, 600 * 0.5 = 300
+            self.canvas.create_image(205, 300, image=self.bg_image, anchor="center")
+        except FileNotFoundError:
+            print("Logo file not found.")
+
+        # 3. Add the TRANSPARENT Title Text to the Canvas
+        # Because it's drawn on the canvas, it has no background box!
+        self.canvas.create_text(
+            512, 80,  # Centered horizontally (1024/2), 80 pixels down
+            text="Welcome To The Makerspace Information Terminal",
+            font=("Arial", 28, "bold"),
+            fill="black",  # Or "white" if you switch to dark mode
+            justify="center"
+        )
+
+        # 4. Add the Buttons
+        # Since buttons are complex, we "embed" them into the canvas
+        btn1 = ttk.Button(self, text="3D Printing Service", style="Big.TButton",
+                          command=lambda: master.switch_frame(PaymentChoiceScreen))
+        btn2 = ttk.Button(self, text="Equipment Service", style="Big.TButton",
+                          command=lambda: master.switch_frame(EquipChoiceScreen))
+
+        # We create "windows" on the canvas to hold the buttons
+        self.canvas.create_window(512, 230, window=btn1, width=400, height=120)
+        self.canvas.create_window(512, 400, window=btn2, width=400, height=120)
+
+class PaymentChoiceScreen(ttk.Frame):
+    def __init__(self, master):
+        super().__init__(master)
+
+        label = ttk.Label(self, text="", font=("Arial", 24))
+        label.pack(pady=20)
+
+        btn1 = ttk.Button(self, text="Log New Print Debt",
+                         command=lambda: master.switch_frame(PaymentInputScreen))
+        btn1.pack(ipadx=60, ipady=45, pady=15)
+
+        btn2 = ttk.Button(self, text="Mark Debt As Paid",
+                         command=lambda: master.switch_frame(PaymentUpdateScreen))
+        btn2.pack(ipadx=60, ipady=45, pady=15)
+
+        btn3 = ttk.Button(self, text="Cancel",
+                         command=lambda: master.switch_frame(StartScreen))
+        btn3.pack(ipadx=30, ipady=15, pady=10)
+
 class PaymentInputScreen(ttk.Frame):
     canvaswidth = 400
     canvasheight = 250
@@ -218,55 +287,84 @@ class PaymentInputScreen(ttk.Frame):
             messagebox.showinfo("Success", "Debt logged successfully!")
             self.master.switch_frame(StartScreen)
 
-class StartScreen(ttk.Frame):
+class PaymentUpdateScreen(ttk.Frame):
     def __init__(self, master):
         super().__init__(master)
         self.master = master
+        self.unpaid_list = self.master.get_unpaid_debts()
 
-        # 1. Create a Canvas that fills the whole frame
-        # We set highlightthickness=0 so there is no border
-        self.canvas = tk.Canvas(self, highlightthickness=0, bd=0)
-        self.canvas.pack(fill="both", expand=True)
+        self.bind("<Button-1>", lambda e: self.master.close_keyboard())
 
-        # 2. Add the Logo to the Canvas
-        try:
-            # We process the logo here once
-            original_logo = Image.open("transparent_png_logo_final.png").convert("RGBA")
-            logo_resized = original_logo.resize((600, 600), Image.Resampling.LANCZOS)
+        ttk.Label(self, text="Clear Outstanding Debt", font=("Arial", 20, "bold")).pack(pady=15)
 
-            # Opacity logic (0.1 for 10% visibility)
-            alpha = logo_resized.split()[3]
-            alpha = ImageEnhance.Brightness(alpha).enhance(0.1)
-            logo_resized.putalpha(alpha)
+        content_container = ttk.Frame(self)
+        content_container.pack(fill="both", expand=True, padx=40)
 
-            self.bg_image = ImageTk.PhotoImage(logo_resized, master=self.master)
+        # --- LEFT COLUMN ---
+        left_col = ttk.Frame(content_container)
+        left_col.pack(side="left", fill="both", expand=True, padx=20)
 
-            # Place logo on canvas (relx=0.2, rely=0.5 as per your original)
-            # 1024 * 0.2 = 205, 600 * 0.5 = 300
-            self.canvas.create_image(205, 300, image=self.bg_image, anchor="center")
-        except FileNotFoundError:
-            print("Logo file not found.")
+        ttk.Label(left_col, text="Select Record", font=("Arial", 12, "bold")).pack(pady=5)
 
-        # 3. Add the TRANSPARENT Title Text to the Canvas
-        # Because it's drawn on the canvas, it has no background box!
-        self.canvas.create_text(
-            512, 80,  # Centered horizontally (1024/2), 80 pixels down
-            text="Welcome To The Makerspace Information Terminal",
-            font=("Arial", 28, "bold"),
-            fill="black",  # Or "white" if you switch to dark mode
-            justify="center"
-        )
+        list_container = ttk.Frame(left_col)
+        list_container.pack(fill="both", expand=True, pady=10)
 
-        # 4. Add the Buttons
-        # Since buttons are complex, we "embed" them into the canvas
-        btn1 = ttk.Button(self, text="3D Printing Service", style="Big.TButton",
-                          command=lambda: master.switch_frame(PaymentChoiceScreen))
-        btn2 = ttk.Button(self, text="Equipment Service", style="Big.TButton",
-                          command=lambda: master.switch_frame(EquipChoiceScreen))
+        self.debt_listbox = tk.Listbox(list_container, font=("Arial", 16), height=6, exportselection=False)
+        self.debt_listbox.pack(side="left", fill="both", expand=True)
 
-        # We create "windows" on the canvas to hold the buttons
-        self.canvas.create_window(512, 230, window=btn1, width=400, height=120)
-        self.canvas.create_window(512, 400, window=btn2, width=400, height=120)
+        if not self.unpaid_list:
+            self.debt_listbox.insert(tk.END, "  No unpaid debts found")
+            self.debt_listbox.config(state="disabled")
+        else:
+            for row in self.unpaid_list:
+                # Show Date, User, and Cost in the list
+                self.debt_listbox.insert(tk.END, f"{row["Bath ID"]} - £{float(row["Value"]):.2f}")
+
+        scrollbar = ttk.Scrollbar(list_container, orient="vertical", command=self.debt_listbox.yview)
+        scrollbar.pack(side="right", fill="y")
+        self.debt_listbox.config(yscrollcommand=scrollbar.set)
+
+        # --- RIGHT COLUMN ---
+        right_col = ttk.Frame(content_container)
+        right_col.pack(side="left", fill="both", expand=True, padx=20)
+
+        ttk.Label(right_col, text="Verification", font=("Arial", 12, "bold")).pack(pady=10)
+        ttk.Label(right_col, text="4-Digit Auth Key", font=("Arial", 11)).pack(anchor="w")
+
+        self.auth_key = ttk.Entry(right_col, font=("Arial", 14))
+        self.auth_key.pack(fill="x", pady=10)
+        self.auth_key.bind("<Button-1>", lambda e: self.master.open_keyboard(mode="numeric"))
+        self.auth_key.bind("<Return>", lambda e: self.master.close_keyboard())
+
+        # 3. BOTTOM BUTTONS
+        btn_frame = ttk.Frame(self)
+        btn_frame.pack(side="bottom", pady=40)
+
+        ttk.Button(btn_frame, text="Mark as PAID", style="Accent.TButton",
+                   command=self.handle_save).pack(side="left", padx=20, ipadx=20, ipady=10)
+        ttk.Button(btn_frame, text="Cancel",
+                   command=lambda: self.master.switch_frame(StartScreen)).pack(side="left", padx=20, ipadx=20, ipady=10)
+
+    def handle_save(self):
+        auth = self.auth_key.get().strip()
+        selection = self.debt_listbox.curselection()
+
+        auth_valid = (len(auth) == 4 and auth.isdigit())
+
+        if auth_valid and auth != "":
+            auth_code_list = sheet.get_possible_auth_code()
+            if auth in auth_code_list:
+                auth_valid = True
+            else:
+                auth_valid = False
+
+        selected_row_data = self.unpaid_list[selection[0]]
+        if auth_valid:
+            sheet.complete_pending_payment(Bath_ID=selected_row_data["Bath ID"], AuthCode=auth)
+            messagebox.showinfo("Success", "Record updated.")
+            self.master.switch_frame(StartScreen)
+        else:
+            messagebox.showwarning("Invalid Auth", "Auth Key must be 4 digits and valid.")
 
 class EquipChoiceScreen(ttk.Frame):
     def __init__(self, master):
@@ -281,25 +379,6 @@ class EquipChoiceScreen(ttk.Frame):
 
         btn2 = ttk.Button(self, text="Returning Equipment",
                          command=lambda: master.switch_frame(EquipReturnScreen))
-        btn2.pack(ipadx=60, ipady=45, pady=15)
-
-        btn3 = ttk.Button(self, text="Cancel",
-                         command=lambda: master.switch_frame(StartScreen))
-        btn3.pack(ipadx=30, ipady=15, pady=10)
-
-class PaymentChoiceScreen(ttk.Frame):
-    def __init__(self, master):
-        super().__init__(master)
-
-        label = ttk.Label(self, text="", font=("Arial", 24))
-        label.pack(pady=20)
-
-        btn1 = ttk.Button(self, text="Log New Print Debt",
-                         command=lambda: master.switch_frame(PaymentInputScreen))
-        btn1.pack(ipadx=60, ipady=45, pady=15)
-
-        btn2 = ttk.Button(self, text="Mark Debt As Paid",
-                         command=lambda: master.switch_frame(PaymentUpdateScreen))
         btn2.pack(ipadx=60, ipady=45, pady=15)
 
         btn3 = ttk.Button(self, text="Cancel",
@@ -541,86 +620,6 @@ class EquipReturnScreen(ttk.Frame):
 
             messagebox.showinfo("Success", f"Item '{item}' returned successfully!")
             self.master.switch_frame(StartScreen)
-
-class PaymentUpdateScreen(ttk.Frame):
-    def __init__(self, master):
-        super().__init__(master)
-        self.master = master
-        self.unpaid_list = self.master.get_unpaid_debts()
-
-        self.bind("<Button-1>", lambda e: self.master.close_keyboard())
-
-        ttk.Label(self, text="Clear Outstanding Debt", font=("Arial", 20, "bold")).pack(pady=15)
-
-        content_container = ttk.Frame(self)
-        content_container.pack(fill="both", expand=True, padx=40)
-
-        # --- LEFT COLUMN ---
-        left_col = ttk.Frame(content_container)
-        left_col.pack(side="left", fill="both", expand=True, padx=20)
-
-        ttk.Label(left_col, text="Select Record", font=("Arial", 12, "bold")).pack(pady=5)
-
-        list_container = ttk.Frame(left_col)
-        list_container.pack(fill="both", expand=True, pady=10)
-
-        self.debt_listbox = tk.Listbox(list_container, font=("Arial", 16), height=6, exportselection=False)
-        self.debt_listbox.pack(side="left", fill="both", expand=True)
-
-        if not self.unpaid_list:
-            self.debt_listbox.insert(tk.END, "  No unpaid debts found")
-            self.debt_listbox.config(state="disabled")
-        else:
-            for row in self.unpaid_list:
-                # Show Date, User, and Cost in the list
-                self.debt_listbox.insert(tk.END, f"{row["Bath ID"]} - £{float(row["Value"]):.2f}")
-
-        scrollbar = ttk.Scrollbar(list_container, orient="vertical", command=self.debt_listbox.yview)
-        scrollbar.pack(side="right", fill="y")
-        self.debt_listbox.config(yscrollcommand=scrollbar.set)
-
-        # --- RIGHT COLUMN ---
-        right_col = ttk.Frame(content_container)
-        right_col.pack(side="left", fill="both", expand=True, padx=20)
-
-        ttk.Label(right_col, text="Verification", font=("Arial", 12, "bold")).pack(pady=10)
-        ttk.Label(right_col, text="4-Digit Auth Key", font=("Arial", 11)).pack(anchor="w")
-
-        self.auth_key = ttk.Entry(right_col, font=("Arial", 14))
-        self.auth_key.pack(fill="x", pady=10)
-        self.auth_key.bind("<Button-1>", lambda e: self.master.open_keyboard(mode="numeric"))
-        self.auth_key.bind("<Return>", lambda e: self.master.close_keyboard())
-
-        # 3. BOTTOM BUTTONS
-        btn_frame = ttk.Frame(self)
-        btn_frame.pack(side="bottom", pady=40)
-
-        ttk.Button(btn_frame, text="Mark as PAID", style="Accent.TButton",
-                   command=self.handle_save).pack(side="left", padx=20, ipadx=20, ipady=10)
-        ttk.Button(btn_frame, text="Cancel",
-                   command=lambda: self.master.switch_frame(StartScreen)).pack(side="left", padx=20, ipadx=20, ipady=10)
-
-    def handle_save(self):
-        auth = self.auth_key.get().strip()
-        selection = self.debt_listbox.curselection()
-
-        auth_valid = (len(auth) == 4 and auth.isdigit())
-
-
-        if auth_valid and auth != "":
-            auth_code_list = sheet.get_possible_auth_code()
-            if auth in auth_code_list:
-                auth_valid = True
-            else:
-                auth_valid = False
-    
-        selected_row_data = self.unpaid_list[selection[0]]
-        if auth_valid:
-            sheet.complete_pending_payment(Bath_ID=selected_row_data["Bath ID"], AuthCode=auth)
-            messagebox.showinfo("Success", "Record updated.")
-            self.master.switch_frame(StartScreen)
-        else:
-            messagebox.showwarning("Invalid Auth", "Auth Key must be 4 digits and valid.")
 
 if __name__ == "__main__":
     app = App()
