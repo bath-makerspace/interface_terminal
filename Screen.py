@@ -218,7 +218,6 @@ class PaymentInputScreen(ttk.Frame):
             messagebox.showinfo("Success", "Debt logged successfully!")
             self.master.switch_frame(StartScreen)
 
-
 class StartScreen(ttk.Frame):
     def __init__(self, master):
         super().__init__(master)
