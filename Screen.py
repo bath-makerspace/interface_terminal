@@ -1,5 +1,6 @@
 import tkinter as tk
 from tkinter import ttk
+import random
 from PIL import Image, ImageDraw, ImageTk, ImageEnhance
 import csv
 import sv_ttk
@@ -96,7 +97,11 @@ class StartScreen(ttk.Frame):
         # 2. Add the Logo to the Canvas
         try:
             # We process the logo here once
-            original_logo = Image.open("transparent_png_logo_final.png").convert("RGBA")
+            chance = random.randint(1,1000)
+            if chance == 676:
+                original_logo = Image.open("eandt.jpg").convert("RGBA")
+            else:
+                original_logo = Image.open("transparent_png_logo_final.png").convert("RGBA")
             logo_resized = original_logo.resize((600, 600), Image.Resampling.LANCZOS)
 
             # Opacity logic (0.1 for 10% visibility)
@@ -146,7 +151,7 @@ class PaymentChoiceScreen(ttk.Frame):
 
         btn2 = ttk.Button(self, text="Add Markforged Print Debt",
                          command=lambda: master.switch_frame(PaymentMarkforgedScreen))
-        btn2.pack(ipadx=40, ipady=35, pady=15)
+        btn2.pack(ipadx=35, ipady=35, pady=15)
 
         btn3 = ttk.Button(self, text="Mark Debt As Paid",
                          command=lambda: master.switch_frame(PaymentUpdateScreen))
@@ -277,10 +282,14 @@ class PaymentInputScreen(ttk.Frame):
             else:
                 auth_valid = False
 
-        if not user or price <= 0 or not self.signed:
-            messagebox.showwarning("Incomplete", "Please fill in Username, Mass, and Signature.")
+        if not user:
+            messagebox.showwarning("Input Error", "Please fill in your username.")
+        elif price <= 0:
+            messagebox.showwarning("Input Error", "Please fill in your print mass.")
+        elif not self.signed:
+            messagebox.showwarning("Input Error", "Please add your signature.")
         elif not auth_valid:
-            messagebox.showwarning("Invalid Auth", "Auth Key must be 4 digits (or leave blank).")
+            messagebox.showwarning("Input error", "Invalid authentication code.")
         else:
             # Save signature with unique timestamp
             filename = f"signatures/debt_{user}_{timestamp}.png"
@@ -288,7 +297,7 @@ class PaymentInputScreen(ttk.Frame):
 
             sheet.add_personal_print_credit(Bath_ID=user, Weight=self.print_mass.get(), AuthCode=auth, Signature_path=filename)
 
-            messagebox.showinfo("Success", "Debt logged successfully!")
+            messagebox.showinfo("Thank you, have a nice day!", "Record logged successfully")
             self.master.switch_frame(StartScreen)
 
 class PaymentUpdateScreen(ttk.Frame):
@@ -307,7 +316,6 @@ class PaymentUpdateScreen(ttk.Frame):
         # --- LEFT COLUMN ---
         left_col = ttk.Frame(content_container)
         left_col.pack(side="left", fill="both", expand=True, padx=20)
-
         ttk.Label(left_col, text="Select Record", font=("Arial", 12)).pack(pady=5)
 
         list_container = ttk.Frame(left_col)
@@ -332,7 +340,8 @@ class PaymentUpdateScreen(ttk.Frame):
         right_col = ttk.Frame(content_container)
         right_col.pack(side="left", fill="both", expand=True, padx=20)
 
-        ttk.Label(right_col, text="Authentication Key", font=("Arial", 11)).pack(anchor="w")
+        ttk.Label(right_col, text="Authentication Key", font=("Arial", 12)).pack(anchor="w")
+        ttk.Label(right_col, text="(Committee only)", font=("Arial", 10, "italic")).pack(anchor="w")
 
         self.auth_key = ttk.Entry(right_col, font=("Arial", 14))
         self.auth_key.pack(fill="x", pady=10)
@@ -343,7 +352,7 @@ class PaymentUpdateScreen(ttk.Frame):
         btn_frame = ttk.Frame(self)
         btn_frame.pack(side="bottom", pady=40)
 
-        ttk.Button(btn_frame, text="Mark as PAID", style="Accent.TButton",
+        ttk.Button(btn_frame, text="Confirm", style="Accent.TButton",
                    command=self.handle_save).pack(side="left", padx=20, ipadx=20, ipady=10)
         ttk.Button(btn_frame, text="Cancel",
                    command=lambda: self.master.switch_frame(StartScreen)).pack(side="left", padx=20, ipadx=20, ipady=10)
@@ -364,10 +373,10 @@ class PaymentUpdateScreen(ttk.Frame):
         selected_row_data = self.unpaid_list[selection[0]]
         if auth_valid:
             sheet.complete_pending_payment(Bath_ID=selected_row_data["Bath ID"], AuthCode=auth)
-            messagebox.showinfo("Success", "Record updated.")
+            messagebox.showinfo("Thank you, have a nice day!", "Record cleared successfully")
             self.master.switch_frame(StartScreen)
         else:
-            messagebox.showwarning("Invalid Auth", "Auth Key must be 4 digits and valid.")
+            messagebox.showwarning("Input Error", "Invalid authentication code.")
 
 class EquipChoiceScreen(ttk.Frame):
     def __init__(self, master):
@@ -376,15 +385,15 @@ class EquipChoiceScreen(ttk.Frame):
         label = ttk.Label(self, text="", font=("Arial", 24))
         label.pack(pady=20)
 
-        btn1 = ttk.Button(self, text="Loaning Equipment",
+        btn1 = ttk.Button(self, text="Loan Equipment",
                          command=lambda: master.switch_frame(EquipLoanScreen))
         btn1.pack(ipadx=60, ipady=45, pady=15)
 
-        btn2 = ttk.Button(self, text="Returning Equipment",
+        btn2 = ttk.Button(self, text="Return Equipment",
                          command=lambda: master.switch_frame(EquipReturnScreen))
         btn2.pack(ipadx=60, ipady=45, pady=15)
 
-        btn3 = ttk.Button(self, text="Cancel",
+        btn3 = ttk.Button(self, text="Back",
                          command=lambda: master.switch_frame(StartScreen))
         btn3.pack(ipadx=30, ipady=15, pady=10)
 
@@ -408,7 +417,7 @@ class EquipLoanScreen(ttk.Frame):
         self.bind("<Button-1>", lambda e: self.master.close_keyboard())
 
         # 1. TOP TITLE
-        ttk.Label(self, text="Equipment Loan Portal", font=("Arial", 20, "bold")).pack(pady=10)
+        ttk.Label(self, text="Loan Equipment", font=("Arial", 20, "bold")).pack(pady=10)
 
         # 2. MAIN CONTENT AREA
         content_container = ttk.Frame(self)
@@ -418,7 +427,7 @@ class EquipLoanScreen(ttk.Frame):
         left_col = ttk.Frame(content_container)
         left_col.pack(side="left", fill="both", expand=True, padx=20)
 
-        ttk.Label(left_col, text="1. Select Category", font=("Arial", 12, "bold")).pack(pady=5)
+        ttk.Label(left_col, text="Select Category", font=("Arial", 12, "bold")).pack(pady=5)
 
         grid_frame = ttk.Frame(left_col)
         grid_frame.pack()
@@ -427,7 +436,7 @@ class EquipLoanScreen(ttk.Frame):
                              command=lambda c=category: self.update_category(c))
             btn.grid(row=i // 2, column=i % 2, padx=5, pady=5, ipady=5)
 
-        ttk.Label(left_col, text="2. Tap to Select Item", font=("Arial", 12, "bold")).pack(pady=(15, 5))
+        ttk.Label(left_col, text="Tap to Select Item", font=("Arial", 12, "bold")).pack(pady=(15, 5))
 
         list_container = ttk.Frame(left_col)
         list_container.pack(fill="both", expand=True)
@@ -450,14 +459,15 @@ class EquipLoanScreen(ttk.Frame):
         right_col.pack(side="left", fill="both", expand=True, padx=20)
 
         # Username
-        ttk.Label(right_col, text="Username", font=("Arial", 11)).pack(anchor="w")
+        ttk.Label(right_col, text="Username", font=("Arial", 12)).pack(anchor="w")
         self.username = ttk.Entry(right_col, font=("Arial", 14))
         self.username.pack(fill="x", pady=(0, 10))
         self.username.bind("<Button-1>", lambda e: self.master.open_keyboard(mode="full"))
         self.username.bind("<Return>", lambda e: self.master.close_keyboard())
 
         # Auth Key
-        ttk.Label(right_col, text="Auth Key (Committee Only)", font=("Arial", 11)).pack(anchor="w")
+        ttk.Label(right_col, text="Authentication Key", font=("Arial", 12)).pack(anchor="w")
+        ttk.Label(right_col, text="(Committee only)", font=("Arial", 10, "italic")).pack(anchor="w")
         self.auth_key = ttk.Entry(right_col, font=("Arial", 14))
         self.auth_key.pack(fill="x", pady=(0, 10))
         self.auth_key.bind("<Button-1>", lambda e: self.master.open_keyboard(mode="numeric"))
@@ -467,7 +477,7 @@ class EquipLoanScreen(ttk.Frame):
         btn_frame = ttk.Frame(self)
         btn_frame.pack(side="bottom", pady=20)
 
-        ttk.Button(btn_frame, text="Confirm Loan", style="Accent.TButton",
+        ttk.Button(btn_frame, text="Confirm", style="Accent.TButton",
                    command=self.handle_save).pack(side="left", padx=20, ipadx=20, ipady=10)
 
         ttk.Button(btn_frame, text="Cancel",
@@ -516,10 +526,14 @@ class EquipLoanScreen(ttk.Frame):
                 auth_valid = False
 
         if not user or not item or not auth_valid:
-            messagebox.showwarning("Incomplete", "Username, Item, Signature, and 4-Digit Auth are REQUIRED.")
+            messagebox.showwarning("Input Error", "Please fill in your username.")
+        elif not item:
+            messagebox.showwarning("Input Error", "Please select an item.")
+        elif not auth_valid:
+            messagebox.showwarning("Input Error", "Invalid authentication code.")
         else:
             sheet.add_loan_out_entry(Bath_ID=user, Item_Category=self.current_category, Item=item, AuthCode=auth)
-            messagebox.showinfo("Success", f"{item} loaned to {user}!")
+            messagebox.showinfo("Thank you, have a nice day!", f"{item} successfully loaned to {user}")
             self.master.switch_frame(StartScreen)
 
 class EquipReturnScreen(ttk.Frame):
@@ -544,7 +558,7 @@ class EquipReturnScreen(ttk.Frame):
         left_col = ttk.Frame(content_container)
         left_col.pack(side="left", fill="both", expand=True, padx=20)
 
-        ttk.Label(left_col, text="1. Select Item to Return", font=("Arial", 12, "bold")).pack(pady=5)
+        ttk.Label(left_col, text="Select Item to Return", font=("Arial", 12)).pack(pady=5)
 
         list_container = ttk.Frame(left_col)
         list_container.pack(fill="both", expand=True, pady=10)
@@ -581,15 +595,14 @@ class EquipReturnScreen(ttk.Frame):
         right_col = ttk.Frame(content_container)
         right_col.pack(side="left", fill="both", expand=True, padx=20)
 
-        ttk.Label(right_col, text="2. Your Details", font=("Arial", 12, "bold")).pack(pady=10)
-
-        ttk.Label(right_col, text="Username", font=("Arial", 11)).pack(anchor="w")
+        ttk.Label(right_col, text="Username", font=("Arial", 12)).pack(anchor="w")
         self.username = ttk.Entry(right_col, font=("Arial", 14))
         self.username.pack(fill="x", pady=(0, 20))
         self.username.bind("<Button-1>", lambda e: self.master.open_keyboard(mode="full"))
         self.username.bind("<Return>", lambda e: self.master.close_keyboard())
 
-        ttk.Label(right_col, text="Auth Key (Committee Only)", font=("Arial", 11)).pack(anchor="w")
+        ttk.Label(right_col, text="Auth Key", font=("Arial", 12)).pack(anchor="w")
+        ttk.Label(right_col, text="(Committee only)", font=("Arial", 10, "italic")).pack(anchor="w")
         self.auth_key = ttk.Entry(right_col, font=("Arial", 14))
         self.auth_key.pack(fill="x", pady=(0, 10))
         self.auth_key.bind("<Button-1>", lambda e: self.master.open_keyboard(mode="numeric"))
