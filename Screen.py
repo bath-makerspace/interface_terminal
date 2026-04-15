@@ -140,7 +140,7 @@ class PaymentChoiceScreen(ttk.Frame):
         label = ttk.Label(self, text="", font=("Arial", 24))
         label.pack(pady=20)
 
-        btn1 = ttk.Button(self, text="Log New Print Debt",
+        btn1 = ttk.Button(self, text="Add 3D Print Debt",
                          command=lambda: master.switch_frame(PaymentInputScreen))
         btn1.pack(ipadx=60, ipady=45, pady=15)
 
@@ -148,7 +148,7 @@ class PaymentChoiceScreen(ttk.Frame):
                          command=lambda: master.switch_frame(PaymentUpdateScreen))
         btn2.pack(ipadx=60, ipady=45, pady=15)
 
-        btn3 = ttk.Button(self, text="Cancel",
+        btn3 = ttk.Button(self, text="Back",
                          command=lambda: master.switch_frame(StartScreen))
         btn3.pack(ipadx=30, ipady=15, pady=10)
 
@@ -168,7 +168,7 @@ class PaymentInputScreen(ttk.Frame):
         self.bind("<Button-1>", lambda e: self.master.close_keyboard())
 
         # 1. TOP TITLE
-        ttk.Label(self, text="Log 3D Print Debt", font=("Arial", 24, "bold")).pack(pady=20)
+        ttk.Label(self, text="Add 3D Print Debt", font=("Arial", 24, "bold")).pack(pady=20)
 
         # 2. MAIN CONTENT AREA
         content_container = ttk.Frame(self)
@@ -178,7 +178,7 @@ class PaymentInputScreen(ttk.Frame):
         left_col = ttk.Frame(content_container)
         left_col.pack(side="left", fill="both", expand=True, padx=20)
 
-        ttk.Label(left_col, text="Username", font=("Arial", 12)).pack(anchor="w")
+        ttk.Label(left_col, text="Payee Username", font=("Arial", 12)).pack(anchor="w")
         self.username = ttk.Entry(left_col, font=("Arial", 14))
         self.username.pack(fill="x", pady=(0, 15))
         self.username.bind("<Button-1>", lambda e: self.master.open_keyboard(mode="full"))
@@ -202,7 +202,7 @@ class PaymentInputScreen(ttk.Frame):
         right_col = ttk.Frame(content_container)
         right_col.pack(side="left", fill="both", expand=True, padx=20)
 
-        ttk.Label(right_col, text="Please Sign Below", font=("Arial", 12)).pack()
+        ttk.Label(right_col, text="Payee Signature", font=("Arial", 12)).pack()
         self.canvas = tk.Canvas(right_col, bg="white", width=self.canvaswidth, height=self.canvasheight,
                                 relief="ridge", bd=2, highlightthickness=0)
         self.canvas.pack(pady=10)
@@ -295,7 +295,7 @@ class PaymentUpdateScreen(ttk.Frame):
 
         self.bind("<Button-1>", lambda e: self.master.close_keyboard())
 
-        ttk.Label(self, text="Clear Outstanding Debt", font=("Arial", 20, "bold")).pack(pady=15)
+        ttk.Label(self, text="Mark Debt As Paid", font=("Arial", 20, "bold")).pack(pady=15)
 
         content_container = ttk.Frame(self)
         content_container.pack(fill="both", expand=True, padx=40)
@@ -304,7 +304,7 @@ class PaymentUpdateScreen(ttk.Frame):
         left_col = ttk.Frame(content_container)
         left_col.pack(side="left", fill="both", expand=True, padx=20)
 
-        ttk.Label(left_col, text="Select Record", font=("Arial", 12, "bold")).pack(pady=5)
+        ttk.Label(left_col, text="Select Record", font=("Arial", 12)).pack(pady=5)
 
         list_container = ttk.Frame(left_col)
         list_container.pack(fill="both", expand=True, pady=10)
@@ -328,8 +328,7 @@ class PaymentUpdateScreen(ttk.Frame):
         right_col = ttk.Frame(content_container)
         right_col.pack(side="left", fill="both", expand=True, padx=20)
 
-        ttk.Label(right_col, text="Verification", font=("Arial", 12, "bold")).pack(pady=10)
-        ttk.Label(right_col, text="4-Digit Auth Key", font=("Arial", 11)).pack(anchor="w")
+        ttk.Label(right_col, text="Authentication Key", font=("Arial", 11)).pack(anchor="w")
 
         self.auth_key = ttk.Entry(right_col, font=("Arial", 14))
         self.auth_key.pack(fill="x", pady=10)
