@@ -307,7 +307,6 @@ class PaymentChoiceScreen(ttk.Frame):
                          command=lambda: master.switch_frame(StartScreen))
         btn3.pack(ipadx=30, ipady=15, pady=10)
 
-
 class EquipLoanScreen(ttk.Frame):
     canvaswidth = 350
     canvasheight = 180  # Slightly shorter to accommodate the extra entry box
@@ -543,7 +542,6 @@ class EquipReturnScreen(ttk.Frame):
 
             messagebox.showinfo("Success", f"Item '{item}' returned successfully!")
             self.master.switch_frame(StartScreen)
-
 
 class PaymentUpdateScreen(ttk.Frame):
     def __init__(self, master):
