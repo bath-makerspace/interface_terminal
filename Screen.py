@@ -627,14 +627,18 @@ class EquipReturnScreen(ttk.Frame):
         auth_valid = (len(auth) == 4 and auth.isdigit())
         timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
 
-        if not user or not item or not auth_valid:
-            messagebox.showwarning("Incomplete", "Username, Selection, and 4-Digit Auth are REQUIRED.")
+        if not user:
+            messagebox.showwarning("Input error", "Please fill in your username.")
+        elif not item:
+            messagebox.showwarning("Input error", "Please select an item.")
+        elif not auth_valid:
+            messagebox.showwarning("Input error", "Invalid authentication code.")
         else:
             with open("loans.csv", "a", newline="") as f:
                 # Logging the return timestamp
                 csv.writer(f).writerow([timestamp, user, "N/A", item, "RETURNED", auth])
 
-            messagebox.showinfo("Success", f"Item '{item}' returned successfully!")
+            messagebox.showinfo("Thank you, have a nice day!", f"Item '{item}' returned successfully")
             self.master.switch_frame(StartScreen)
 
 if __name__ == "__main__":
