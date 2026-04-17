@@ -27,7 +27,7 @@ class sheet_API:
         self.client = gspread.authorize(self.creds)
         self.drive_service = self.__get_service('credentials.json')
         self.auth_codes = self.__get_possible_online_auth_code()
-        self.committee_users = self.__get_possible_online_committee_users()
+        # self.committee_users = self.__get_possible_online_committee_users()
     
     def __get_service(self, cred_file):
         SCOPES = ['https://www.googleapis.com/auth/drive.file']
@@ -273,7 +273,6 @@ class sheet_API:
         auth_codes = []
         for row in table_val:
             auth_codes.append(row["Auth Key"])
-        print("Auth codes", str(auth_codes))
         return auth_codes
 
     # def get_possible_committee_users(self) -> list:
