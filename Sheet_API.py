@@ -27,6 +27,7 @@ class sheet_API:
         self.client = gspread.authorize(self.creds)
         self.drive_service = self.__get_service('credentials.json')
         self.auth_codes = self.__get_possible_online_auth_code()
+        self.committee_users = self.__get_possible_online_committee_users()
     
     def __get_service(self, cred_file):
         SCOPES = ['https://www.googleapis.com/auth/drive.file']
@@ -46,7 +47,6 @@ class sheet_API:
         return build('drive', 'v3', credentials=creds)
 
     def __get_table_column_val(self, spreadsheet_name:str, sheet_name:str, table_range:str):
-        
         spreadsheet_name = spreadsheet_name.strip()
         sheet_name = sheet_name.strip()
 
@@ -273,7 +273,20 @@ class sheet_API:
         auth_codes = []
         for row in table_val:
             auth_codes.append(row["Auth Key"])
+        print("Auth codes", str(auth_codes))
         return auth_codes
+
+    # def get_possible_committee_users(self) -> list:
+    #     return self.committee_users
+    #
+    # def __get_possible_online_committee_users(self) -> list:
+    #     table_details = self.convert_LUT('Auth_Code')
+    #     table_val = self.__get_table_column_val(table_details["spreadsheet_name"], table_details["sheet_name"], table_details["col"])
+    #     committee_users = []
+    #     for row in table_val:
+    #         committee_users.append(row["Username"])
+    #     print("Committee users", str(committee_users))
+    #     return committee_users
 
     def convert_LUT(self,target_name:str) -> str:
         csv_filename = "Sheet_LUT.csv"

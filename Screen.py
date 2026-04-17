@@ -8,7 +8,6 @@ import os
 import subprocess
 from tkinter import messagebox
 from datetime import datetime
-
 from Bath_Cost_Code import Calculate_Personal_Cost
 from Sheet_API import sheet_API
 
@@ -294,9 +293,7 @@ class PaymentInputScreen(ttk.Frame):
             # Save signature with unique timestamp
             filename = f"signatures/debt_{user}_{timestamp}.png"
             self.image.save(filename)
-
             sheet.add_personal_print_credit(Bath_ID=user, Weight=self.print_mass.get(), AuthCode=auth, Signature_path=filename)
-
             messagebox.showinfo("Thank you, have a nice day!", "Record logged successfully")
             self.master.switch_frame(StartScreen)
 
