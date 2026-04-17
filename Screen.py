@@ -427,7 +427,7 @@ class EquipLoanScreen(ttk.Frame):
         left_col = ttk.Frame(content_container)
         left_col.pack(side="left", fill="both", expand=True, padx=20)
 
-        ttk.Label(left_col, text="Select Category", font=("Arial", 12, "bold")).pack(pady=5)
+        ttk.Label(left_col, text="Select Category", font=("Arial", 12)).pack(pady=5)
 
         grid_frame = ttk.Frame(left_col)
         grid_frame.pack()
@@ -436,7 +436,7 @@ class EquipLoanScreen(ttk.Frame):
                              command=lambda c=category: self.update_category(c))
             btn.grid(row=i // 2, column=i % 2, padx=5, pady=5, ipady=5)
 
-        ttk.Label(left_col, text="Tap to Select Item", font=("Arial", 12, "bold")).pack(pady=(15, 5))
+        ttk.Label(left_col, text="Tap to Select Item", font=("Arial", 12)).pack(pady=(15, 5))
 
         list_container = ttk.Frame(left_col)
         list_container.pack(fill="both", expand=True)
