@@ -99,7 +99,7 @@ class StartScreen(ttk.Frame):
             # We process the logo here once
             chance = random.randint(1,1000)
             if chance == 676:
-                original_logo = Image.open("eandt.jpg").convert("RGBA")
+                original_logo = Image.open("transparent_jpg_logo_final.jpg").convert("RGBA")
             else:
                 original_logo = Image.open("transparent_png_logo_final.png").convert("RGBA")
             logo_resized = original_logo.resize((600, 600), Image.Resampling.LANCZOS)
