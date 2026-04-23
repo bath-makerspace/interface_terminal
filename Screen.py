@@ -149,7 +149,7 @@ class PaymentChoiceScreen(ttk.Frame):
         btn1.pack(ipadx=60, ipady=35, pady=15)
 
         btn2 = ttk.Button(self, text="Add Markforged Print Debt",
-                         command=lambda: master.switch_frame(PaymentMarkforgedScreen))
+                         command=lambda: master.switch_frame(MarkforgedInputScreen))
         btn2.pack(ipadx=35, ipady=35, pady=15)
 
         btn3 = ttk.Button(self, text="Mark Debt As Paid",
@@ -295,6 +295,190 @@ class PaymentInputScreen(ttk.Frame):
             self.image.save(filename)
             sheet.add_personal_print_credit(Bath_ID=user, Weight=self.print_mass.get(), AuthCode=auth, Signature_path=filename)
             messagebox.showinfo("Thank you, have a nice day!", "Record logged successfully")
+            self.master.switch_frame(StartScreen)
+
+class MarkforgedInputScreen(ttk.Frame):
+    canvaswidth = 400
+    canvasheight = 200  # Slightly shorter to fit extra inputs
+
+    def __init__(self, master):
+        super().__init__(master)
+        self.master = master
+        self.signed = False
+        self.selected_fiber = "None"  # Default state
+
+        if not os.path.exists("signatures"):
+            os.makedirs("signatures")
+
+        self.bind("<Button-1>", lambda e: self.master.close_keyboard())
+
+        # 1. TOP TITLE
+        ttk.Label(self, text="Add Markforged Print Debt", font=("Arial", 24, "bold")).pack(pady=10)
+
+        # 2. MAIN CONTENT AREA
+        content_container = ttk.Frame(self)
+        content_container.pack(fill="both", expand=True, padx=40)
+
+        # --- LEFT COLUMN (Inputs) ---
+        left_col = ttk.Frame(content_container)
+        left_col.pack(side="left", fill="both", expand=True, padx=20)
+
+        # Username
+        ttk.Label(left_col, text="Payee Username", font=("Arial", 11)).pack(anchor="w")
+        self.username = ttk.Entry(left_col, font=("Arial", 14))
+        self.username.pack(fill="x", pady=(0, 10))
+        self.username.bind("<Button-1>", lambda e: self.master.open_keyboard(mode="full"))
+
+        # Base Onyx Volume
+        ttk.Label(left_col, text="Onyx CCs", font=("Arial", 11)).pack(anchor="w")
+        self.onyx_vol = ttk.Entry(left_col, font=("Arial", 14))
+        self.onyx_vol.pack(fill="x", pady=(0, 10))
+        self.onyx_vol.bind("<Button-1>", lambda e: self.master.open_keyboard(mode="numeric"))
+
+        # Fiber Selection Buttons
+        ttk.Label(left_col, text="Select Reinforcement Fibre", font=("Arial", 11)).pack(anchor="w")
+        fiber_frame = ttk.Frame(left_col)
+        fiber_frame.pack(fill="x", pady=(0, 10))
+
+        self.fiber_btns = {}
+        for f_type in ["Carbon Fibre", "Kevlar", "None"]:
+            btn = ttk.Button(fiber_frame, text=f_type,
+                             command=lambda t=f_type: self.select_fiber(t))
+            btn.pack(side="left", expand=True, fill="x", padx=2)
+            self.fiber_btns[f_type] = btn
+
+        # Fibre Volume & Print Time (Side-by-side)
+        extra_info_frame = ttk.Frame(left_col)
+        extra_info_frame.pack(fill="x")
+
+        # Fibre CCs
+        f_cc_frame = ttk.Frame(extra_info_frame)
+        f_cc_frame.pack(side="left", expand=True, fill="x", padx=(0, 5))
+        ttk.Label(f_cc_frame, text="Fibre CCs", font=("Arial", 10)).pack(anchor="w")
+        self.fiber_vol = ttk.Entry(f_cc_frame, font=("Arial", 14))
+        self.fiber_vol.pack(fill="x")
+        self.fiber_vol.bind("<Button-1>", lambda e: self.master.open_keyboard(mode="numeric"))
+
+        # Hours
+        hr_frame = ttk.Frame(extra_info_frame)
+        hr_frame.pack(side="left", expand=True, fill="x", padx=(5, 0))
+        ttk.Label(hr_frame, text="Print Time (Hrs)", font=("Arial", 10)).pack(anchor="w")
+        self.print_hrs = ttk.Entry(hr_frame, font=("Arial", 14))
+        self.print_hrs.pack(fill="x")
+        self.print_hrs.bind("<Button-1>", lambda e: self.master.open_keyboard(mode="numeric"))
+
+        # Auth Key
+        ttk.Label(left_col, text="Auth Key", font=("Arial", 11)).pack(anchor="w", pady=(10, 0))
+        ttk.Label(left_col, text="(Committee only - for if paying now)", font=("Arial", 10, "italic")).pack(anchor="w")
+        self.auth_key = ttk.Entry(left_col, font=("Arial", 14))
+        self.auth_key.pack(fill="x")
+        self.auth_key.bind("<Button-1>", lambda e: self.master.open_keyboard(mode="numeric"))
+
+        self.cost_display = ttk.Label(left_col, text="Cost: £0.00", font=("Arial", 18, "bold"))
+        self.cost_display.pack(pady=5)
+
+        # --- RIGHT COLUMN (Signature) ---
+        right_col = ttk.Frame(content_container)
+        right_col.pack(side="left", fill="both", expand=True, padx=20)
+
+        ttk.Label(right_col, text="Payee Signature", font=("Arial", 12)).pack()
+        self.canvas = tk.Canvas(right_col, bg="white", width=self.canvaswidth, height=self.canvasheight,
+                                relief="ridge", bd=2, highlightthickness=0)
+        self.canvas.pack(pady=10)
+
+        self.image = Image.new("RGB", (self.canvaswidth, self.canvasheight), "white")
+        self.draw = ImageDraw.Draw(self.image)
+        self.last_x, self.last_y = None, None
+
+        self.canvas.bind("<B1-Motion>", self.paint)
+        self.canvas.bind("<ButtonRelease-1>", self.reset_coords)
+        ttk.Button(right_col, text="Clear Signature", command=self.clear).pack()
+
+        # 3. BOTTOM BUTTON BAR
+        btn_frame = ttk.Frame(self)
+        btn_frame.pack(side="bottom", pady=20)
+
+        ttk.Button(btn_frame, text="Confirm", style="Accent.TButton",
+                   command=self.handle_save).pack(side="left", padx=20, ipadx=20, ipady=10)
+
+        ttk.Button(btn_frame, text="Cancel",
+                   command=lambda: self.master.switch_frame(StartScreen)).pack(side="left", padx=20, ipadx=20, ipady=10)
+
+    def select_fiber(self, fiber_type):
+        """Updates the selection state and color of buttons."""
+        self.selected_fiber = fiber_type
+        # If you have an 'Accent.TButton' defined, you could toggle styles here.
+        # For now, we'll just store the choice and update the cost.
+        self.update_price()
+
+    def paint(self, event):
+        if self.last_x and self.last_y:
+            self.canvas.create_line(self.last_x, self.last_y, event.x, event.y,
+                                    width=4, fill="black", capstyle=tk.ROUND, smooth=True)
+            self.draw.line([self.last_x, self.last_y, event.x, event.y], fill="black", width=4)
+            self.signed = True
+        self.last_x, self.last_y = event.x, event.y
+
+    def reset_coords(self, event):
+        self.last_x, self.last_y = None, None
+
+    def clear(self):
+        self.canvas.delete("all")
+        self.image = Image.new("RGB", (self.canvaswidth, self.canvasheight), "white")
+        self.draw = ImageDraw.Draw(self.image)
+        self.signed = False
+
+    def update_price(self):
+        onyx = self.onyx_vol.get()
+        fiber = self.fiber_vol.get() or "0"
+        hours = self.print_hrs.get() or "0"
+
+        if onyx:
+            try:
+                # You'll need to create/update your Calculate_Personal_Cost to handle
+                # Markforged variables, or create a specific 'Calculate_Markforged_Cost'
+                price = sheet.calculate_markforged_cost(onyx, self.selected_fiber, fiber, hours)
+                self.cost_display.config(text=f"Cost: £{float(price):.2f}")
+                return price
+            except:
+                self.cost_display.config(text="Invalid Inputs!")
+        return 0
+
+    def handle_save(self):
+        user = self.username.get().strip()
+        onyx = self.onyx_vol.get()
+        fiber_vol = self.fiber_vol.get() or "0"
+        hrs = self.print_hrs.get() or "0"
+        price = self.calculate_markforged_cost()
+        auth = self.auth_key.get().strip()
+
+        # Validating Auth
+        auth_valid = (auth == "" or (len(auth) == 4 and auth.isdigit()))
+        if auth_valid and auth != "":
+            auth_code_list = sheet.get_possible_auth_code()
+            auth_valid = auth in auth_code_list
+
+        if not user or not onyx or not self.signed:
+            messagebox.showwarning("Input Error", "Please ensure Username, Onyx Volume, and Signature are filled.")
+        elif not auth_valid:
+            messagebox.showerror("Auth Error", "Invalid authentication code.")
+        else:
+            # timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+            # filename = f"signatures/markforged_{user}_{timestamp}.png"
+            # self.image.save(filename)
+            #
+            # # Assuming your spreadsheet helper has a specific method for Markforged
+            # sheet.add_markforged_print_credit(
+            #     Bath_ID=user,
+            #     Onyx_CC=onyx,
+            #     Fiber_Type=self.selected_fiber,
+            #     Fiber_CC=fiber_vol,
+            #     Hours=hrs,
+            #     AuthCode=auth,
+            #     Signature_path=filename
+            # )
+
+            messagebox.showinfo("Success", "Markforged record logged successfully.")
             self.master.switch_frame(StartScreen)
 
 class PaymentUpdateScreen(ttk.Frame):
