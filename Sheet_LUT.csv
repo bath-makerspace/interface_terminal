@@ -10,6 +10,7 @@ Electronics_Equipment,Inventory,Equipment Inventory,N:T
 Laser_Printer_Equip, Inventory,Equipment Inventory,V:AA
 
 Auth_Code,Committee Info,Committee/Volunteer,D:D
+Username,Committee Info,Committee/Volunteer,B:B
 
 Credit_Tracker,GUI_Credit Tracker,Printing Credit,A:G
 Credit_AuthCode,GUI_Credit Tracker,Printing Credit,G:G
