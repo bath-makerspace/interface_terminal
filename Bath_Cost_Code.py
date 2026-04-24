@@ -27,12 +27,10 @@ def calculate_markforged_cost(onyx_cc, fiber_type, fiber_cc, hours):
     hours: float/int - Total print time
     """
 
-    # --- PLACEHOLDER PRICE CONSTANTS ---
-    ONYX_PRICE_PER_CC = 0.50  # e.g., £0.50 per cc
-    CARBON_FIBER_PRICE_PER_CC = 1.50  # e.g., £1.50 per cc
-    KEVLAR_PRICE_PER_CC = 1.20  # e.g., £1.20 per cc
-    TIME_PRICE_PER_HOUR = 2.00  # e.g., £2.00 per hour for machine wear
-    # -----------------------------------
+    ONYX_PRICE_PER_CC = 0.24
+    CARBON_FIBER_PRICE_PER_CC = 2.22
+    KEVLAR_PRICE_PER_CC = 1.48
+    TIME_PRICE_PER_HOUR = 0.9
 
     try:
         # Convert inputs to floats in case they come in as strings from Entry widgets
