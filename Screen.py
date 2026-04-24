@@ -9,6 +9,7 @@ import subprocess
 from tkinter import messagebox
 from datetime import datetime
 from Bath_Cost_Code import Calculate_Personal_Cost
+from Bath_Cost_Code import calculate_markforged_cost
 from Sheet_API import sheet_API
 
 sheet = sheet_API()
@@ -294,7 +295,7 @@ class PaymentInputScreen(ttk.Frame):
             filename = f"signatures/debt_{user}_{timestamp}.png"
             self.image.save(filename)
             sheet.add_personal_print_credit(Bath_ID=user, Weight=self.print_mass.get(), AuthCode=auth, Signature_path=filename)
-            messagebox.showinfo("Thank you, have a nice day!", "Record logged successfully")
+            messagebox.showinfo("Thank you, have a nice day!", "Record logged successfully.")
             self.master.switch_frame(StartScreen)
 
 class MarkforgedInputScreen(ttk.Frame):
@@ -430,26 +431,31 @@ class MarkforgedInputScreen(ttk.Frame):
 
     def update_price(self):
         onyx = self.onyx_vol.get()
-        fiber = self.fiber_vol.get() or "0"
+        fiber_vol = self.fiber_vol.get() or "0"
         hours = self.print_hrs.get() or "0"
 
+        # Only attempt calculation if at least Onyx volume is entered
         if onyx:
             try:
-                # You'll need to create/update your Calculate_Personal_Cost to handle
-                # Markforged variables, or create a specific 'Calculate_Markforged_Cost'
-                price = sheet.calculate_markforged_cost(onyx, self.selected_fiber, fiber, hours)
-                self.cost_display.config(text=f"Cost: £{float(price):.2f}")
+                # Calling our new separate function
+                price = calculate_markforged_cost(
+                    onyx_cc=onyx,
+                    fiber_type=self.selected_fiber,
+                    fiber_cc=fiber_vol,
+                    hours=hours
+                )
+                self.cost_display.config(text=f"Cost: £{price:.2f}")
                 return price
-            except:
+            except ValueError:
                 self.cost_display.config(text="Invalid Inputs!")
-        return 0
+        return 0.0
 
     def handle_save(self):
         user = self.username.get().strip()
         onyx = self.onyx_vol.get()
         fiber_vol = self.fiber_vol.get() or "0"
-        hrs = self.print_hrs.get() or "0"
-        price = self.calculate_markforged_cost()
+        hrs = self.print_hrs.get()
+        price = self.update_price()
         auth = self.auth_key.get().strip()
 
         # Validating Auth
@@ -458,10 +464,16 @@ class MarkforgedInputScreen(ttk.Frame):
             auth_code_list = sheet.get_possible_auth_code()
             auth_valid = auth in auth_code_list
 
-        if not user or not onyx or not self.signed:
-            messagebox.showwarning("Input Error", "Please ensure Username, Onyx Volume, and Signature are filled.")
+        if not user:
+            messagebox.showwarning("Input Error", "Please fill in your username.")
+        elif not onyx:
+            messagebox.showwarning("Input Error", "Please fill in your onyx volume.")
+        elif not hrs:
+            messagebox.showwarning("Input Error", "Please fill in your print time.")
+        elif not self.signed:
+            messagebox.showwarning("Input Error", "Please add your signature.")
         elif not auth_valid:
-            messagebox.showerror("Auth Error", "Invalid authentication code.")
+            messagebox.showerror("Input Error", "Invalid authentication code.")
         else:
             # timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
             # filename = f"signatures/markforged_{user}_{timestamp}.png"
@@ -478,7 +490,7 @@ class MarkforgedInputScreen(ttk.Frame):
             #     Signature_path=filename
             # )
 
-            messagebox.showinfo("Success", "Markforged record logged successfully.")
+            messagebox.showinfo("Thank you, have a nice day!", "Record logged successfully.")
             self.master.switch_frame(StartScreen)
 
 class PaymentUpdateScreen(ttk.Frame):
@@ -554,7 +566,7 @@ class PaymentUpdateScreen(ttk.Frame):
         selected_row_data = self.unpaid_list[selection[0]]
         if auth_valid:
             sheet.complete_pending_payment(Bath_ID=selected_row_data["Bath ID"], AuthCode=auth)
-            messagebox.showinfo("Thank you, have a nice day!", "Record cleared successfully")
+            messagebox.showinfo("Thank you, have a nice day!", "Record cleared successfully.")
             self.master.switch_frame(StartScreen)
         else:
             messagebox.showwarning("Input Error", "Invalid authentication code.")
@@ -714,7 +726,7 @@ class EquipLoanScreen(ttk.Frame):
             messagebox.showwarning("Input Error", "Invalid authentication code.")
         else:
             sheet.add_loan_out_entry(Bath_ID=user, Item_Category=self.current_category, Item=item, AuthCode=auth)
-            messagebox.showinfo("Thank you, have a nice day!", f"{item} successfully loaned to {user}")
+            messagebox.showinfo("Thank you, have a nice day!", f"{item} successfully loaned to {user}.")
             self.master.switch_frame(StartScreen)
 
 class EquipReturnScreen(ttk.Frame):
@@ -819,7 +831,7 @@ class EquipReturnScreen(ttk.Frame):
                 # Logging the return timestamp
                 csv.writer(f).writerow([timestamp, user, "N/A", item, "RETURNED", auth])
 
-            messagebox.showinfo("Thank you, have a nice day!", f"Item '{item}' returned successfully")
+            messagebox.showinfo("Thank you, have a nice day!", f"Item '{item}' returned successfully.")
             self.master.switch_frame(StartScreen)
 
 if __name__ == "__main__":
