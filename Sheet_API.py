@@ -1,3 +1,5 @@
+from calendar import error
+
 import gspread
 import pandas as pd
 import os
@@ -102,6 +104,19 @@ class sheet_API:
         date = "'"+str(date) # Ensure date is treated as text in Google Sheets
 
         Value = Calculate_Personal_Cost(Weight)
+        committeeusernames = self.get_possible_committee_users()
+        if AuthCode and AuthCode != "":
+            authcodes = self.get_possible_auth_code()
+            if Bath_ID in committeeusernames:
+                committeeusernameindex = committeeusernames.index(Bath_ID)
+                authcodesindex = authcodes.index(AuthCode)
+                if committeeusernameindex != authcodesindex:
+                    Value = round(0.9 * Value, 2)
+                else:
+                    shit_yourself_function = sheet.shit_yourself
+        else:
+            if Bath_ID in committeeusernames:
+                Value = round(0.9 * Value, 2)
         
         AuthCode = "'"+AuthCode # Ensure AuthCode is treated as text in Google Sheets
         AUTHORISER_FORMULA = f"=VLOOKUP(G{row_values + 1},'Committee/Volunteer'!D:F,2,FALSE)"
@@ -124,7 +139,7 @@ class sheet_API:
                 if item["Bath ID"] == Bath_ID:
                     pending_row = index + 2 # +1, for header, +1 because index starts at 0
                     pending_target_range = f"{pending_table_details['col'].split(':')[0]}{pending_row}:{pending_table_details['col'].split(':')[1]}{pending_row}"
-                    weight = int(item["Weight"]) + Weight
+                    weight = int(item["Weight"]) + int(Weight)
                     Value = float(item["Value"]) + Value
                     Row_in_Print_Credit = item["Row_in_Printing_Credit"] + "," + str(row_values + 1)
                     new_pending_data = [Bath_ID, weight, Value, Row_in_Print_Credit]
@@ -135,6 +150,73 @@ class sheet_API:
             pending_start_col = pending_col[0]
             pending_target_range = f"{pending_table_details['col'].split(':')[0]}{len(pending_sheet.col_values(self.__col_to_num(pending_start_col)))+1}:{pending_table_details['col'].split(':')[1]}{len(pending_sheet.col_values(self.__col_to_num(pending_start_col)))+1}"
             pending_sheet.update(range_name=pending_target_range, values=[[Bath_ID, Weight, Value,str(row_values + 1)]],value_input_option='USER_ENTERED')
+
+    def add_personal_markforged_credit(self, Bath_ID: str, Price: str, AuthCode: str = "", Signature_path: str = ""):
+        table_details = self.convert_LUT('Credit_Tracker')
+
+        sheet = self.client.open(table_details["spreadsheet_name"]).worksheet(table_details["sheet_name"])
+
+        col = table_details["col"].split(":")
+        start_col = col[0]
+        end_col = col[1]
+        row_values = len(sheet.col_values(1))
+
+        date = datetime.now().strftime("%d/%m/%Y")
+        date = "'" + str(date)  # Ensure date is treated as text in Google Sheets
+
+        Value = Price
+        committeeusernames = self.get_possible_committee_users()
+        if AuthCode and AuthCode != "":
+            authcodes = self.get_possible_auth_code()
+            if Bath_ID in committeeusernames:
+                committeeusernameindex = committeeusernames.index(Bath_ID)
+                authcodesindex = authcodes.index(AuthCode)
+                if committeeusernameindex != authcodesindex:
+                    Value = round(0.9 * Value, 2)
+                else:
+                    shit_yourself_function = sheet.shit_yourself
+        else:
+            if Bath_ID in committeeusernames:
+                Value =round(0.9 * Value, 2)
+
+        AuthCode = "'" + AuthCode  # Ensure AuthCode is treated as text in Google Sheets
+        AUTHORISER_FORMULA = f"=VLOOKUP(G{row_values + 1},'Committee/Volunteer'!D:F,2,FALSE)"
+
+        sign_url = self.__upload_image_to_drive(Signature_path)
+        Signature = f'=IMAGE("{sign_url}", 4, 50, 50)'
+
+        new_row_data = [date, Bath_ID, 777, Value, Signature, AUTHORISER_FORMULA, AuthCode]
+        target_range = f"{start_col}{row_values + 1}:{end_col}{row_values + 1}"
+
+        sheet.update(range_name=target_range, values=[new_row_data], value_input_option='USER_ENTERED')
+        os.remove(Signature_path)  # Remove the image from local storage after uploading to Google Drive
+        print(f"Successfully added row to {table_details['sheet_name']} at {target_range}")
+
+        if AuthCode == "'" or AuthCode is None:
+            pending_table_details = self.convert_LUT('Pending_Payment')
+            pending_sheet = self.client.open(pending_table_details["spreadsheet_name"]).worksheet(
+                pending_table_details["sheet_name"])
+            pending_pay_table = self.__get_table_column_val(pending_table_details["spreadsheet_name"],
+                                                            pending_table_details["sheet_name"],
+                                                            pending_table_details["col"])
+            for index, item in enumerate(pending_pay_table):
+                if item["Bath ID"] == Bath_ID:
+                    pending_row = index + 2  # +1, for header, +1 because index starts at 0
+                    pending_target_range = f"{pending_table_details['col'].split(':')[0]}{pending_row}:{pending_table_details['col'].split(':')[1]}{pending_row}"
+                    weight = int(item["Weight"]) + int(777)
+                    Value = float(item["Value"]) + Value
+                    Row_in_Print_Credit = item["Row_in_Printing_Credit"] + "," + str(row_values + 1)
+                    new_pending_data = [Bath_ID, weight, Value, Row_in_Print_Credit]
+                    pending_sheet.update(range_name=pending_target_range, values=[new_pending_data],
+                                         value_input_option='USER_ENTERED')
+                    print(f"Successfully added row to {pending_table_details['sheet_name']} at {pending_target_range}")
+                    return
+            pending_col = pending_table_details["col"].split(":")
+            pending_start_col = pending_col[0]
+            pending_target_range = f"{pending_table_details['col'].split(':')[0]}{len(pending_sheet.col_values(self.__col_to_num(pending_start_col))) + 1}:{pending_table_details['col'].split(':')[1]}{len(pending_sheet.col_values(self.__col_to_num(pending_start_col))) + 1}"
+            pending_sheet.update(range_name=pending_target_range,
+                                 values=[[Bath_ID, 777, Value, str(row_values + 1)]],
+                                 value_input_option='USER_ENTERED')
 
     def add_loan_out_entry(self, Bath_ID:str, Item_Category:str, Item:str, AuthCode:str):
         on_loan_table_details = self.convert_LUT('Loan_Out')

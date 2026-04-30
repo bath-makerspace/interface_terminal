@@ -294,9 +294,12 @@ class PaymentInputScreen(ttk.Frame):
             # Save signature with unique timestamp
             filename = f"signatures/debt_{user}_{timestamp}.png"
             self.image.save(filename)
-            sheet.add_personal_print_credit(Bath_ID=user, Weight=self.print_mass.get(), AuthCode=auth, Signature_path=filename)
-            messagebox.showinfo("Thank you, have a nice day!", "Record logged successfully.")
-            self.master.switch_frame(StartScreen)
+            try:
+                sheet.add_personal_print_credit(Bath_ID=user, Weight=self.print_mass.get(), AuthCode=auth, Signature_path=filename)
+                messagebox.showinfo("Thank you, have a nice day!", "Record logged successfully.")
+                self.master.switch_frame(StartScreen)
+            except AttributeError:
+                messagebox.showwarning("Input error", "A committee member cannot sign their own payment!")
 
 class MarkforgedInputScreen(ttk.Frame):
     canvaswidth = 400
@@ -460,6 +463,7 @@ class MarkforgedInputScreen(ttk.Frame):
 
         # Validating Auth
         auth_valid = (auth == "" or (len(auth) == 4 and auth.isdigit()))
+        timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
         if auth_valid and auth != "":
             auth_code_list = sheet.get_possible_auth_code()
             auth_valid = auth in auth_code_list
@@ -475,23 +479,15 @@ class MarkforgedInputScreen(ttk.Frame):
         elif not auth_valid:
             messagebox.showerror("Input Error", "Invalid authentication code.")
         else:
-            # timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-            # filename = f"signatures/markforged_{user}_{timestamp}.png"
-            # self.image.save(filename)
-            #
-            # # Assuming your spreadsheet helper has a specific method for Markforged
-            # sheet.add_markforged_print_credit(
-            #     Bath_ID=user,
-            #     Onyx_CC=onyx,
-            #     Fiber_Type=self.selected_fiber,
-            #     Fiber_CC=fiber_vol,
-            #     Hours=hrs,
-            #     AuthCode=auth,
-            #     Signature_path=filename
-            # )
-
-            messagebox.showinfo("Thank you, have a nice day!", "Record logged successfully.")
-            self.master.switch_frame(StartScreen)
+            # Save signature with unique timestamp
+            filename = f"signatures/debt_{user}_{timestamp}.png"
+            self.image.save(filename)
+            try:
+                sheet.add_personal_markforged_credit(Bath_ID=user, Price=price, AuthCode=auth, Signature_path=filename)
+                messagebox.showinfo("Thank you, have a nice day!", "Record logged successfully.")
+                self.master.switch_frame(StartScreen)
+            except AttributeError:
+                messagebox.showwarning("Input error", "A committee member cannot sign their own payment!")
 
 class PaymentUpdateScreen(ttk.Frame):
     def __init__(self, master):
@@ -553,23 +549,31 @@ class PaymentUpdateScreen(ttk.Frame):
     def handle_save(self):
         auth = self.auth_key.get().strip()
         selection = self.debt_listbox.curselection()
-
+        ro2_valid = True
         auth_valid = (len(auth) == 4 and auth.isdigit())
 
+        selected_row_data = self.unpaid_list[selection[0]]
+        username = selected_row_data["Bath ID"]
         if auth_valid and auth != "":
             auth_code_list = sheet.get_possible_auth_code()
+            usernames_list = sheet.get_possible_committee_users()
             if auth in auth_code_list:
                 auth_valid = True
+                auth_index = auth_code_list.index(auth)
+                user_index = usernames_list.index(username)
+                if username in usernames_list and auth_index == user_index:
+                    ro2_valid = False
             else:
                 auth_valid = False
 
-        selected_row_data = self.unpaid_list[selection[0]]
-        if auth_valid:
-            sheet.complete_pending_payment(Bath_ID=selected_row_data["Bath ID"], AuthCode=auth)
+        if auth_valid and ro2_valid:
+            sheet.complete_pending_payment(Bath_ID=username, AuthCode=auth)
             messagebox.showinfo("Thank you, have a nice day!", "Record cleared successfully.")
             self.master.switch_frame(StartScreen)
-        else:
+        elif ro2_valid and not auth_valid:
             messagebox.showwarning("Input Error", "Invalid authentication code.")
+        elif  auth_valid and not ro2_valid:
+            messagebox.showwarning("Input error", "A committee member cannot sign their own payment!")
 
 class EquipChoiceScreen(ttk.Frame):
     def __init__(self, master):
