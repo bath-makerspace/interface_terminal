@@ -62,26 +62,32 @@ class App(tk.Tk):
         self.focus_set()
 
     def get_loaned_items(self):
-        """Returns items currently 'LOANED' based on the 6-column format."""
+        """Returns items currently 'On Loan' across all equipment categories from the Google Sheet."""
         loaned_items = set()
-        if os.path.exists("loans.csv"):
-            with open("loans.csv", "r") as f:
-                reader = csv.reader(f)
-                for row in reader:
-                    # Indexing: 0:Time, 1:User, 2:Cat, 3:Item, 4:Status, 5:Auth
-                    if len(row) >= 5:
-                        item = row[3]
-                        status = row[4]
-                        if status == "LOANED":
-                            loaned_items.add(item)
-                        elif status == "RETURNED":
-                            loaned_items.discard(item)
+
+        # The categories from your Sheet_LUT
+        categories = [
+            "IT_Inventory",
+            "Mechanical_tools",
+            "Electronics_Equipment",
+            "Laser_Printer_Equip"
+        ]
+
+        for category in categories:
+            # Use get_equipment_inventory to get ALL items in the category, not just available ones
+            inventory = sheet.get_equipment_inventory(category)
+
+            if inventory:
+                for item in inventory:
+                    # Check if the item's location status is 'On Loan'
+                    if item.get("Location") == "On Loan":
+                        loaned_items.add(item.get("Item Name"))
+
         return loaned_items
 
     def get_unpaid_debts(self):
         """Returns rows from entries.csv where column 4 (Auth) is missing."""
         unpaid = sheet.get_pending_payments()
-        
         return unpaid
 
 class StartScreen(ttk.Frame):
@@ -129,10 +135,10 @@ class StartScreen(ttk.Frame):
 
         # 4. Add the Buttons
         # Since buttons are complex, we "embed" them into the canvas
-        btn1 = ttk.Button(self, text="3D Printing Service", style="Big.TButton",
+        btn1 = ttk.Button(self, text="3D Printing Services", style="Big.TButton",
                           command=lambda: master.switch_frame(PaymentChoiceScreen))
-        btn2 = ttk.Button(self, text="Equipment Service", style="Big.TButton",
-                          command=lambda: master.switch_frame(EquipChoiceScreen))
+        btn2 = ttk.Button(self, text="Equipment Services (Coming Soon!)",
+                          )#command=lambda: master.switch_frame(EquipChoiceScreen))
 
         # We create "windows" on the canvas to hold the buttons
         self.canvas.create_window(512, 230, window=btn1, width=400, height=120)
@@ -145,17 +151,17 @@ class PaymentChoiceScreen(ttk.Frame):
         label = ttk.Label(self, text="", font=("Arial", 24))
         label.pack(pady=20)
 
-        btn1 = ttk.Button(self, text="Add 3D Print Debt",
+        btn1 = ttk.Button(self, text="Add 3D Print Debt", style="Big.TButton",
                          command=lambda: master.switch_frame(PaymentInputScreen))
-        btn1.pack(ipadx=60, ipady=35, pady=15)
+        btn1.pack(ipadx=150, ipady=70, pady=15)
 
-        btn2 = ttk.Button(self, text="Add Markforged Print Debt",
+        btn2 = ttk.Button(self, text="Add Markforged Print Debt", style="Big.TButton",
                          command=lambda: master.switch_frame(MarkforgedInputScreen))
-        btn2.pack(ipadx=35, ipady=35, pady=15)
+        btn2.pack(ipadx=15, ipady=25, pady=15)
 
-        btn3 = ttk.Button(self, text="Mark Debt As Paid",
+        btn3 = ttk.Button(self, text="Mark Debt As Paid", style="Big.TButton",
                          command=lambda: master.switch_frame(PaymentUpdateScreen))
-        btn3.pack(ipadx=60, ipady=35, pady=15)
+        btn3.pack(ipadx=70, ipady=25, pady=15)
 
         btn4 = ttk.Button(self, text="Back",
                          command=lambda: master.switch_frame(StartScreen))
@@ -582,11 +588,11 @@ class EquipChoiceScreen(ttk.Frame):
         label = ttk.Label(self, text="", font=("Arial", 24))
         label.pack(pady=20)
 
-        btn1 = ttk.Button(self, text="Loan Equipment",
+        btn1 = ttk.Button(self, text="Loan Equipment", style="Big.TButton",
                          command=lambda: master.switch_frame(EquipLoanScreen))
         btn1.pack(ipadx=60, ipady=45, pady=15)
 
-        btn2 = ttk.Button(self, text="Return Equipment",
+        btn2 = ttk.Button(self, text="Return Equipment", style="Big.TButton",
                          command=lambda: master.switch_frame(EquipReturnScreen))
         btn2.pack(ipadx=60, ipady=45, pady=15)
 
@@ -690,23 +696,6 @@ class EquipLoanScreen(ttk.Frame):
             self.item_listbox.insert(tk.END, "  No items available")
         self.master.close_keyboard()
 
-    def paint(self, event):
-        if self.last_x and self.last_y:
-            self.canvas.create_line(self.last_x, self.last_y, event.x, event.y,
-                                    width=4, fill="black", capstyle=tk.ROUND, smooth=True)
-            self.draw.line([self.last_x, self.last_y, event.x, event.y], fill="black", width=4)
-            self.signed = True
-        self.last_x, self.last_y = event.x, event.y
-
-    def reset_coords(self, event):
-        self.last_x, self.last_y = None, None
-
-    def clear(self):
-        self.canvas.delete("all")
-        self.image = Image.new("RGB", (self.canvaswidth, self.canvasheight), "white")
-        self.draw = ImageDraw.Draw(self.image)
-        self.signed = False
-
     def handle_save(self):
         user = self.username.get().strip()
         auth = self.auth_key.get().strip()
@@ -714,20 +703,37 @@ class EquipLoanScreen(ttk.Frame):
         item = self.item_listbox.get(selection[0]).strip() if selection else None
 
         auth_valid = (len(auth) == 4 and auth.isdigit())
-        
-        if auth_valid and auth != "":
-            auth_code_list = sheet.get_possible_auth_code()
-            if auth in auth_code_list:
-                auth_valid = True
+        committeeusernames = sheet.get_possible_committee_users()
+        authcodes = sheet.get_possible_auth_code()
+        auth_code_list = sheet.get_possible_auth_code()
+        if user in committeeusernames and auth_valid and auth != "" and auth in auth_code_list:
+            committeeusernameindex = committeeusernames.index(user)
+            authcodesindex = authcodes.index(auth)
+            if committeeusernameindex != authcodesindex:
+                if auth_valid and auth != "":
+                    if auth in auth_code_list:
+                        auth_valid = True
+                        ro2_valid = True
+                    else:
+                        auth_valid = False
             else:
-                auth_valid = False
+                ro2_valid = False
+        else:
+            if auth_valid and auth != "":
+                if auth in auth_code_list:
+                    auth_valid = True
+                    ro2_valid = True
+                else:
+                    auth_valid = False
 
-        if not user or not item or not auth_valid:
+        if not user:
             messagebox.showwarning("Input Error", "Please fill in your username.")
         elif not item:
             messagebox.showwarning("Input Error", "Please select an item.")
         elif not auth_valid:
             messagebox.showwarning("Input Error", "Invalid authentication code.")
+        elif not ro2_valid:
+            messagebox.showwarning("Input Error", "A committee member cannot sign their own loan!")
         else:
             sheet.add_loan_out_entry(Bath_ID=user, Item_Category=self.current_category, Item=item, AuthCode=auth)
             messagebox.showinfo("Thank you, have a nice day!", f"{item} successfully loaned to {user}.")
@@ -737,10 +743,8 @@ class EquipReturnScreen(ttk.Frame):
     def __init__(self, master):
         super().__init__(master)
         self.master = master
-
-        # Pull the fresh list of loaned items from the CSV
         self.loaned_items = self.master.get_loaned_items()
-
+        print(self.loaned_items)
         # Background tap closes keyboard
         self.bind("<Button-1>", lambda e: self.master.close_keyboard())
 
@@ -776,7 +780,8 @@ class EquipReturnScreen(ttk.Frame):
             self.item_listbox.config(state="disabled")
         else:
             for item in sorted(self.loaned_items):
-                self.item_listbox.insert(tk.END, f"  {item}")
+                # Show Date, User, and Cost in the list
+                self.item_listbox.insert(tk.END, f"{item}")
 
         # Thick scrollbar for touchscreen
         scrollbar_style = ttk.Style()
@@ -823,6 +828,29 @@ class EquipReturnScreen(ttk.Frame):
 
         auth_valid = (len(auth) == 4 and auth.isdigit())
         timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+        committeeusernames = sheet.get_possible_committee_users()
+        authcodes = sheet.get_possible_auth_code()
+        auth_code_list = sheet.get_possible_auth_code()
+
+        if user in committeeusernames and auth_valid and auth != "" and auth in auth_code_list:
+            committeeusernameindex = committeeusernames.index(user)
+            authcodesindex = authcodes.index(auth)
+            if committeeusernameindex != authcodesindex:
+                if auth_valid and auth != "":
+                    if auth in auth_code_list:
+                        auth_valid = True
+                        ro2_valid = True
+                    else:
+                        auth_valid = False
+            else:
+                ro2_valid = False
+        else:
+            if auth_valid and auth != "":
+                if auth in auth_code_list:
+                    auth_valid = True
+                    ro2_valid = True
+                else:
+                    auth_valid = False
 
         if not user:
             messagebox.showwarning("Input error", "Please fill in your username.")
@@ -830,16 +858,19 @@ class EquipReturnScreen(ttk.Frame):
             messagebox.showwarning("Input error", "Please select an item.")
         elif not auth_valid:
             messagebox.showwarning("Input error", "Invalid authentication code.")
+        elif not ro2_valid:
+            messagebox.showwarning("Input Error", "A committee member cannot sign their own loan!")
         else:
-            with open("loans.csv", "a", newline="") as f:
-                # Logging the return timestamp
-                csv.writer(f).writerow([timestamp, user, "N/A", item, "RETURNED", auth])
+            #WORK
 
             messagebox.showinfo("Thank you, have a nice day!", f"Item '{item}' returned successfully.")
             self.master.switch_frame(StartScreen)
 
 if __name__ == "__main__":
     app = App()
-    # Apply the theme to the specific app instance
+
     sv_ttk.set_theme("light")
+    style = ttk.Style()
+    style.configure("Big.TButton", font=("Arial", 20, "bold"))
+
     app.mainloop()
