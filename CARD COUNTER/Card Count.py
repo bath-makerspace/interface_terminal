@@ -1,44 +1,36 @@
 import tkinter as tk
 import time
-import board
-import busio
-from adafruit_pn532.i2c import PN532_I2C
+import serial
+from adafruit_pn532.uart import PN532_UART
 
 
 class RFIDScannerApp:
     def __init__(self, root):
         self.root = root
-        self.root.title("NFC Scanner")
+        self.root.title("NFC Scanner (UART)")
         self.root.attributes("-fullscreen", True)
         self.root.configure(bg="#2c3e50")
 
-        # Application State
         self.is_scanning = False
         self.unique_tags = set()
         self.scan_start_time = 0
         self.pn532 = None
-        self.i2c = None
+        self.uart_connection = None
 
-        # Start with the initialization UI
         self.build_init_ui()
-
-        # Schedule the hardware check 500ms after the UI loads so the user sees the message
         self.root.after(500, self.attempt_hardware_init)
 
     def build_init_ui(self):
-        """Builds the startup screen that shows while detecting hardware."""
         self.init_frame = tk.Frame(self.root, bg="#2c3e50")
         self.init_frame.pack(expand=True, fill=tk.BOTH)
 
-        # Center content
         inner_frame = tk.Frame(self.init_frame, bg="#2c3e50")
         inner_frame.place(relx=0.5, rely=0.5, anchor=tk.CENTER)
 
-        self.status_label = tk.Label(inner_frame, text="Detecting NFC Reader...", font=("Helvetica", 28, "bold"),
+        self.status_label = tk.Label(inner_frame, text="Detecting NFC Reader (UART)...", font=("Helvetica", 28, "bold"),
                                      bg="#2c3e50", fg="white")
         self.status_label.pack(pady=20)
 
-        # Buttons (Hidden by default, shown if init fails)
         self.btn_frame = tk.Frame(inner_frame, bg="#2c3e50")
 
         self.retry_btn = tk.Button(self.btn_frame, text="Retry Connection", font=("Helvetica", 18, "bold"),
@@ -50,38 +42,35 @@ class RFIDScannerApp:
         self.init_exit_btn.pack(side=tk.LEFT, padx=10)
 
     def retry_init(self):
-        """Resets the UI and tries to connect again."""
         self.btn_frame.pack_forget()
-        self.status_label.config(text="Detecting NFC Reader...", fg="white")
+        self.status_label.config(text="Detecting NFC Reader (UART)...", fg="white")
         self.root.after(500, self.attempt_hardware_init)
 
     def attempt_hardware_init(self):
-        """Tries to initialize the I2C bus and the PN532 module."""
         try:
-            # Clean up old I2C if a previous attempt failed
-            if self.i2c:
-                self.i2c.deinit()
+            if self.uart_connection:
+                self.uart_connection.close()
 
-            self.i2c = busio.I2C(board.SCL, board.SDA)
-            self.pn532 = PN532_I2C(self.i2c, debug=False)
+            # Initialize serial port. PN532 defaults to 115200 baud over UART.
+            self.uart_connection = serial.Serial("/dev/serial0", baudrate=115200, timeout=0.1)
+            self.pn532 = PN532_UART(self.uart_connection, debug=False)
+
+            # Configure to read MIFARE/Type A cards
             self.pn532.SAM_configuration()
 
-            # If we reach here, it succeeded. Destroy init screen and load main UI.
             self.init_frame.destroy()
             self.build_main_ui()
 
         except Exception as e:
             print(f"Hardware initialization failed: {e}")
-            self.status_label.config(text="Failed to detect NFC Reader.\nCheck wiring on I2C pins.", fg="#e74c3c")
-            # Show the Retry and Exit buttons
+            self.status_label.config(text="Failed to detect NFC Reader.\nCheck UART wiring and serial config.",
+                                     fg="#e74c3c")
             self.btn_frame.pack(pady=20)
 
     def build_main_ui(self):
-        """Builds the main scanner interface."""
         btn_font = ("Helvetica", 18, "bold")
         lbl_font = ("Helvetica", 20)
 
-        # --- TOP FRAME ---
         top_frame = tk.Frame(self.root, bg="#2c3e50")
         top_frame.pack(side=tk.TOP, fill=tk.X, pady=20)
 
@@ -96,7 +85,6 @@ class RFIDScannerApp:
         self.timer_label = tk.Label(top_frame, text="Time: 00:00:00", font=lbl_font, bg="#2c3e50", fg="white")
         self.timer_label.pack(side=tk.RIGHT, padx=40)
 
-        # --- MIDDLE FRAME ---
         mid_frame = tk.Frame(self.root, bg="#2c3e50")
         mid_frame.pack(expand=True, fill=tk.BOTH, padx=40, pady=20)
 
@@ -112,7 +100,6 @@ class RFIDScannerApp:
         self.tag_listbox.pack(expand=True, fill=tk.BOTH)
         scrollbar.config(command=self.tag_listbox.yview)
 
-        # --- BOTTOM FRAME ---
         bottom_frame = tk.Frame(self.root, bg="#2c3e50")
         bottom_frame.pack(side=tk.BOTTOM, fill=tk.X, pady=20)
 
@@ -141,13 +128,13 @@ class RFIDScannerApp:
             hours, remainder = divmod(elapsed, 3600)
             minutes, seconds = divmod(remainder, 60)
 
-            time_str = f"Time: {hours:02d}:{minutes:02d}:{seconds:02d}"
-            self.timer_label.config(text=time_str)
+            self.timer_label.config(text=f"Time: {hours:02d}:{minutes:02d}:{seconds:02d}")
             self.root.after(1000, self.update_timer)
 
     def poll_rfid(self):
         if self.is_scanning and self.pn532:
             try:
+                # timeout=0.05 keeps the UI responsive
                 uid = self.pn532.read_passive_target(timeout=0.05)
 
                 if uid is not None:
@@ -166,8 +153,8 @@ class RFIDScannerApp:
 
     def exit_app(self):
         self.is_scanning = False
-        if self.i2c:
-            self.i2c.deinit()
+        if self.uart_connection:
+            self.uart_connection.close()
         self.root.destroy()
 
 
