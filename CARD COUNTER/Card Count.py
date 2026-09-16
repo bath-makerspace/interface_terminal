@@ -1,6 +1,8 @@
 import tkinter as tk
 import time
 import serial
+import csv
+import datetime
 from adafruit_pn532.uart import PN532_UART
 
 
@@ -11,9 +13,18 @@ class RFIDScannerApp:
         self.root.attributes("-fullscreen", True)
         self.root.configure(bg="#2c3e50")
 
+        # Application State
         self.is_scanning = False
         self.unique_tags = set()
+        self.all_scans = []  # Stores every individual scan
+
         self.scan_start_time = 0
+        self.scan_start_datetime = None
+
+        # Debounce variables to prevent flooding when a card is held
+        self.last_scanned_tag = None
+        self.last_scanned_time = 0
+
         self.pn532 = None
         self.uart_connection = None
 
@@ -27,7 +38,7 @@ class RFIDScannerApp:
         inner_frame = tk.Frame(self.init_frame, bg="#2c3e50")
         inner_frame.place(relx=0.5, rely=0.5, anchor=tk.CENTER)
 
-        self.status_label = tk.Label(inner_frame, text="Detecting NFC Reader (UART)...", font=("Helvetica", 28, "bold"),
+        self.status_label = tk.Label(inner_frame, text="Detecting NFC Reader...", font=("Helvetica", 28, "bold"),
                                      bg="#2c3e50", fg="white")
         self.status_label.pack(pady=20)
 
@@ -43,7 +54,7 @@ class RFIDScannerApp:
 
     def retry_init(self):
         self.btn_frame.pack_forget()
-        self.status_label.config(text="Detecting NFC Reader (UART)...", fg="white")
+        self.status_label.config(text="Detecting NFC Reader...", fg="white")
         self.root.after(500, self.attempt_hardware_init)
 
     def attempt_hardware_init(self):
@@ -51,11 +62,8 @@ class RFIDScannerApp:
             if self.uart_connection:
                 self.uart_connection.close()
 
-            # Initialize serial port. PN532 defaults to 115200 baud over UART.
             self.uart_connection = serial.Serial("/dev/serial0", baudrate=115200, timeout=0.1)
             self.pn532 = PN532_UART(self.uart_connection, debug=False)
-
-            # Configure to read MIFARE/Type A cards
             self.pn532.SAM_configuration()
 
             self.init_frame.destroy()
@@ -112,19 +120,60 @@ class RFIDScannerApp:
             self.is_scanning = True
             self.start_btn.config(state=tk.DISABLED)
             self.stop_btn.config(state=tk.NORMAL)
+
+            # Reset lists and UI for a fresh scan session
+            self.unique_tags.clear()
+            self.all_scans = []
+            self.tag_listbox.delete(0, tk.END)
+            self.count_label.config(text="Unique Cards Scanned: 0")
+
             self.scan_start_time = time.time()
+            self.scan_start_datetime = datetime.datetime.now()
 
             self.update_timer()
             self.poll_rfid()
 
     def stop_scan(self):
-        self.is_scanning = False
-        self.start_btn.config(state=tk.NORMAL)
-        self.stop_btn.config(state=tk.DISABLED)
+        if self.is_scanning:
+            self.is_scanning = False
+            self.start_btn.config(state=tk.NORMAL)
+            self.stop_btn.config(state=tk.DISABLED)
+            self.generate_csv()
+
+    def generate_csv(self):
+        stop_dt = datetime.datetime.now()
+        # Format: Cardscans_[YYYY-MM-DD_HH-MM-SS].csv
+        filename = f"Cardscans_[{stop_dt.strftime('%Y-%m-%d_%H-%M-%S')}].csv"
+
+        try:
+            with open(filename, mode='w', newline='') as file:
+                writer = csv.writer(file)
+
+                # Write the 3 header rows required
+                start_str = self.scan_start_datetime.strftime('%Y-%m-%d %H:%M:%S')
+                stop_str = stop_dt.strftime('%Y-%m-%d %H:%M:%S')
+
+                writer.writerow(["Scan Started", start_str])
+                writer.writerow(["Scan Stopped", stop_str])
+                writer.writerow(["Unique Cards Scanned", len(self.unique_tags)])
+
+                # Write all individual scans
+                for scan_time, tag in self.all_scans:
+                    writer.writerow([scan_time, tag])
+
+            print(f"Successfully saved {filename}")
+        except Exception as e:
+            print(f"Failed to save CSV: {e}")
 
     def update_timer(self):
         if self.is_scanning:
             elapsed = int(time.time() - self.scan_start_time)
+
+            # Auto-stop after 12 hours (43200 seconds)
+            if elapsed >= 43200:
+                self.stop_scan()
+                return
+
             hours, remainder = divmod(elapsed, 3600)
             minutes, seconds = divmod(remainder, 60)
 
@@ -134,25 +183,42 @@ class RFIDScannerApp:
     def poll_rfid(self):
         if self.is_scanning and self.pn532:
             try:
-                # timeout=0.05 keeps the UI responsive
                 uid = self.pn532.read_passive_target(timeout=0.05)
+                current_time = time.time()
 
                 if uid is not None:
                     tag_data = ":".join([hex(i)[2:].zfill(2).upper() for i in uid])
 
-                    if tag_data not in self.unique_tags:
-                        self.unique_tags.add(tag_data)
-                        self.count_label.config(text=f"Unique Cards Scanned: {len(self.unique_tags)}")
+                    # Debounce: Ignore if it's the exact same card held against the reader for less than 2 seconds
+                    if tag_data == self.last_scanned_tag and (current_time - self.last_scanned_time) < 2.0:
+                        pass
+                    else:
+                        self.last_scanned_tag = tag_data
+                        self.last_scanned_time = current_time
 
-                        timestamp = time.strftime('%H:%M:%S')
-                        self.tag_listbox.insert(0, f"[{timestamp}] Tag ID: {tag_data}")
+                        # Keep track of unique cards
+                        if tag_data not in self.unique_tags:
+                            self.unique_tags.add(tag_data)
+                            self.count_label.config(text=f"Unique Cards Scanned: {len(self.unique_tags)}")
+
+                        # Log every valid tap (unique or duplicate)
+                        timestamp_str = time.strftime('%H:%M:%S')
+                        self.all_scans.append((timestamp_str, tag_data))
+                        self.tag_listbox.insert(0, f"[{timestamp_str}] Tag ID: {tag_data}")
+                else:
+                    # If no card is detected, clear the last tag so they can tap the same card repeatedly if they pull it away
+                    self.last_scanned_tag = None
+
             except Exception as e:
                 print(f"Error reading NFC data: {e}")
 
             self.root.after(200, self.poll_rfid)
 
     def exit_app(self):
-        self.is_scanning = False
+        # Ensure we save a CSV if the user exits while a scan is actively running
+        if self.is_scanning:
+            self.stop_scan()
+
         if self.uart_connection:
             self.uart_connection.close()
         self.root.destroy()
